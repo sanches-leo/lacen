@@ -1,0 +1,33 @@
+Package: lacen
+Title: lncRNA Annotation Co-Expression Network tool
+Version: 0.0.2.000
+Authors@R: 
+    person("Leonardo", "Sanches", , "first.last@example.com", role = c("aut", "cre"),
+           comment = c(ORCID = "YOUR-ORCID-ID"))
+Description: This package uses co-expression networks to find highly connected lncRNAs in RNAseq cancer data.
+License: GPL (>= 3)
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+biocViews:
+Depends:
+    WGCNA
+Imports:
+    ggplot2,
+    gprofiler2,
+    graphics,
+    grid,
+    fastcluster,
+    grDevices,
+    stats,
+    rrvgo,
+    limma,
+    rtracklayer,
+    foreach,
+    doParallel,
+    Polychrome,
+    ggraph,
+    graphlayouts,
+    igraph,
+    scatterpie,
+    utils

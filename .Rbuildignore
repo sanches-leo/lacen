@@ -1,0 +1,6 @@
+^lacen\.Rproj$
+^\.Rproj\.user$
+^LICENSE\.md$
+script.R
+^[\.]csv$$
+.png$
