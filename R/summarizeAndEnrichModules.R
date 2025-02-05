@@ -266,7 +266,8 @@ summarizeAndEnrichModules.lacen <- function(lacenObject,
                                                 threshold = threshold, 
                                                 orgdb = org_db)
         
-        clustered_genes <- clustered_genes[order(clustered_genes$cluster), ]
+ #       clustered_genes <- clustered_genes[order(clustered_genes$cluster), ]
+        clustered_genes <- merge(enrichment_data[,c("term_id", "intersection")], reduced_terms[,c("go", "parentTerm", "cluster")], by = 1)
         
         # Aggregate genes per cluster
         submodules <- lapply(unique(clustered_genes$cluster), function(cluster_id) {
@@ -520,7 +521,7 @@ summarizeAndEnrichModules.lacen <- function(lacenObject,
   }
   
   # Reduce enrichment terms
-  reduced_enrichment <- reduce_enrichment(
+  reduced_enrichment <- reduce_enrichment_terms(
     enrichment_results, 
     summary_df, 
     expr_data, 
