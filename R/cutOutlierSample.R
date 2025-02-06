@@ -37,7 +37,7 @@ cutOutlierSample.lacen <- function(lacenObject,
   # Update the lacenObject with the samples to keep
   lacenObject$keepSamples <- keep_samples
   lacenObject$datExpr <- expr_data[keep_samples, ]
-  lacenObject$datTraits <- traits[keep_samples]
+  lacenObject$datTraits <- lacenObject$datTraits[keep_samples, ]
   
   return(lacenObject)
 }

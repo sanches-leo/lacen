@@ -1,0 +1,8 @@
+Starting summarizeAndEnrichModules function
+Loading functions
+Making the network
+Getting connectivities
+Summarizing the data
+Enriching the modules
+Reducing the enriched modules
+Generating plot
