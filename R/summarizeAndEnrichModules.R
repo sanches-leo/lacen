@@ -370,83 +370,123 @@ summarizeAndEnrichModules.lacen <- function(lacenObject,
     
     return(reduced_list)
   }
-  
+
   # Internal function to save the enrichment graph as a treemap
-  save_enrichment_graph <- function(reduced_enrichment, summary_df, expr_data, traits, filename, mod_path) {
-    # Prepare genes to select
-    genes_selected <- summary_df$gene_id[summary_df$cutBootstrap]
-    
-    # Extract expression data for selected genes
-    expr_selected <- expr_data[, colnames(expr_data) %in% genes_selected]
-    
-    # Define layout for multiple treemaps
-    num_graphs <- length(reduced_enrichment)
-    grid_size <- ceiling(sqrt(num_graphs))
-    
-    grDevices::png(filename = filename, width = 800 * grid_size, height = 800 * grid_size)
-    grid::pushViewport(grid::viewport(layout = grid::grid.layout(grid_size, grid_size)))
-    
-    counter <- 1
-    for (mod in names(reduced_enrichment)) {
-      if (counter > num_graphs) break
-      module <- mod
-      genes_in_module <- summary_df$module == module
-      
-      # Calculate module eigengenes
-      module_eigengenes <- WGCNA::moduleEigengenes(expr_selected, as.numeric(genes_in_module))$eigengenes
-      ordered_MEs <- WGCNA::orderMEs(module_eigengenes)
-      module_trait_cor <- WGCNA::cor(ordered_MEs, traits, use = "p")
-      module_trait_pval <- WGCNA::corPvalueStudent(module_trait_cor, nrow(expr_selected))
-      correlation <- module_trait_cor[[2]]
-      p_value <- module_trait_pval[[2]]
-      
-      # Plot treemap using rrvgo
-      rrvgo::treemapPlot(reduced_enrichment[[mod]], size = "score",
-                         title = paste0("Module ", module, 
-                                        " (corr: ", round(correlation, 2), 
-                                        ", pValue: ", format(p_value, scientific = TRUE, digits = 2), ")"),
-                         vp = grid::viewport(layout.pos.row = ceiling(counter / grid_size),
-                                             layout.pos.col = counter %% grid_size),
-                         fontsize.title = 22,
-                         fontsize.labels = 14)
-      counter <- counter + 1
-    }
-    
-    grDevices::dev.off()
-    
-    # Optionally save individual module plots
-    if (!isFALSE(mod_path)) {
-      counter <- 1
-      for (mod in names(reduced_enrichment)) {
-        if (counter > num_graphs) break
-        module <- mod
-        genes_in_module <- summary_df$module == module
+  save_enrichment_graph <- function(rrvgolist, summdf, datExpr, traits, filename, modPath) {
+  
+  # Select genes with significant bootstrap support
+  selected_genes <- summdf[summdf$cutBootstrap, c("module", "gene_id")]
+  
+  # Filter expression matrix for selected genes
+  filtered_expr_data <- datExpr[, colnames(datExpr) %in% selected_genes$gene_id]
+  
+  # Function to define viewport layout
+  define_viewport <- function(row, col) grid::viewport(layout.pos.row = row, layout.pos.col = col)
+  
+  # Determine grid layout for plots
+  num_graphs <- length(rrvgolist)
+  grid_size <- ceiling(sqrt(num_graphs))  # Square root to arrange in a square grid
+  
+  # Create a PNG for the combined plots
+  grDevices::png(filename = filename, width = 800 * grid_size, height = 800 * grid_size)
+  grid::pushViewport(grid::viewport(layout = grid::grid.layout(grid_size, grid_size)))
+  
+  module_counter <- 1  # Counter for iterating over modules
+  
+  for (row in 1:grid_size) {
+    for (col in 1:grid_size) {
+      if (module_counter <= num_graphs) {
         
-        # Calculate module eigengenes
-        module_eigengenes <- WGCNA::moduleEigengenes(expr_selected, as.numeric(genes_in_module))$eigengenes
-        ordered_MEs <- WGCNA::orderMEs(module_eigengenes)
-        module_trait_cor <- WGCNA::cor(ordered_MEs, traits, use = "p")
-        module_trait_pval <- WGCNA::corPvalueStudent(module_trait_cor, nrow(expr_selected))
-        correlation <- module_trait_cor[[2]]
+        module_name <- names(rrvgolist[module_counter])
+        is_module_gene <- selected_genes$module == module_name
+        
+        # Compute module eigengenes and correlation with traits
+        module_eigengenes <- WGCNA::moduleEigengenes(filtered_expr_data, as.numeric(is_module_gene))$eigengenes
+        ordered_eigengenes <- WGCNA::orderMEs(module_eigengenes)
+        module_trait_cor <- WGCNA::cor(ordered_eigengenes, traits, use = "p")
+        module_trait_pval <- WGCNA::corPvalueStudent(module_trait_cor, nrow(datExpr))
+        
+        # Extract correlation and p-value for the second trait
+        correlation_value <- module_trait_cor[[2]]
         p_value <- module_trait_pval[[2]]
         
-        # Define file path for the module plot
-        module_filename <- file.path(mod_path, paste0("module_", module, ".png"))
+        # Format the plot title
+        plot_title <- paste0(
+          "Module ", module_name, 
+          " (corr.: ", format(correlation_value, scientific = FALSE, digits = 2), 
+          ", pValue: ", ifelse(p_value > 0.0099, 
+                               format(p_value, scientific = FALSE, digits = 2), 
+                               format(p_value, scientific = TRUE, digits = 2)), 
+          ")"
+        )
         
-        # Save treemap for the module
-        grDevices::png(filename = module_filename, width = 800, height = 800)
-        rrvgo::treemapPlot(reduced_enrichment[[mod]], size = "score",
-                           title = paste0("Module ", module, 
-                                          " (corr: ", round(correlation, 2), 
-                                          ", pValue: ", format(p_value, scientific = TRUE, digits = 2), ")"),
-                           fontsize.title = 22,
-                           fontsize.labels = 14)
-        grDevices::dev.off()
-        counter <- counter + 1
+        # Generate treemap plot
+        rrvgo::treemapPlot(
+          rrvgolist[[module_counter]], 
+          size = "score",
+          title = plot_title,
+          vp = define_viewport(row, col),
+          fontsize.title = 22,
+          fontsize.labels = 14
+        )
+        
+        module_counter <- module_counter + 1
       }
     }
   }
   
+  grDevices::dev.off()
+  
+  # If individual module plots are required
+  if (!isFALSE(modPath)) {
+    module_counter <- 1  # Reset counter
+    
+    for (row in 1:grid_size) {
+      for (col in 1:grid_size) {
+        if (module_counter <= num_graphs) {
+          
+          module_name <- names(rrvgolist[module_counter])
+          is_module_gene <- selected_genes$module == module_name
+          
+          # Compute module eigengenes and correlation
+          module_eigengenes <- WGCNA::moduleEigengenes(filtered_expr_data, as.numeric(is_module_gene))$eigengenes
+          ordered_eigengenes <- WGCNA::orderMEs(module_eigengenes)
+          module_trait_cor <- WGCNA::cor(ordered_eigengenes, traits, use = "p")
+          module_trait_pval <- WGCNA::corPvalueStudent(module_trait_cor, nrow(datExpr))
+          
+          correlation_value <- module_trait_cor[[2]]
+          p_value <- module_trait_pval[[2]]
+          
+          plot_title <- paste0(
+            "Module ", module_name, 
+            " (corr.: ", format(correlation_value, scientific = FALSE, digits = 2), 
+            ", pValue: ", ifelse(p_value > 0.0099, 
+                                 format(p_value, scientific = FALSE, digits = 2), 
+                                 format(p_value, scientific = TRUE, digits = 2)), 
+            ")"
+          )
+          
+          # Save individual module plot
+          grDevices::png(filename = file.path(modPath, paste0("module_", module_name, ".png")), 
+                         width = 800, height = 800)
+          
+          rrvgo::treemapPlot(
+            rrvgolist[[module_counter]], 
+            size = "score",
+            title = plot_title,
+            fontsize.title = 22,
+            fontsize.labels = 14
+          )
+          
+          grDevices::dev.off()
+          module_counter <- module_counter + 1
+        }
+      }
+    }
+  }
+}
+
+
   # Internal function to generate Topological Overlap Matrix (TOM)
   generate_TOM <- function(expr_data, power, summary_df) {
     tom_matrix <- WGCNA::TOMsimilarityFromExpr(expr_data, power = power, TOMType = "unsigned")
