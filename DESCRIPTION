@@ -1,25 +1,30 @@
 Package: lacen
 Title: lncRNA Annotation Co-Expression Network tool
-Version: 0.0.2.000
+Version: 0.0.3
 Authors@R: 
-    person("Leonardo", "Sanches", , "first.last@example.com", role = c("aut", "cre"),
-           comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: This package uses co-expression networks to find highly connected lncRNAs in RNAseq cancer data.
+    person("Leonardo", "Sanches", 
+           email = "leonardo2.sanches@usp.br", 
+           role = c("aut", "cre"))
+Description: Provides tools for building co-expression networks to identify 
+    highly connected long non-coding RNAs (lncRNAs) in cancer RNA-seq data. 
+    Implements workflows for data preprocessing, network construction using 
+    WGCNA, module identification, and functional enrichment analysis.
 License: GPL (>= 3)
+URL:
+    https://github.com/sanches-leo/lacen
+BugReports: 
+    https://github.com/sanches-leo/lacen/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
-biocViews:
-Depends:
-    WGCNA
+LazyData: true
+Depends: 
+    R (>= 4.0.0)
 Imports:
+    WGCNA,
     ggplot2,
     gprofiler2,
-    graphics,
-    grid,
     fastcluster,
-    grDevices,
-    stats,
     rrvgo,
     limma,
     rtracklayer,
@@ -30,4 +35,13 @@ Imports:
     graphlayouts,
     igraph,
     scatterpie,
-    utils
+    org.Hs.eg.db,
+    methods,
+    utils,
+    stats,
+    parallel
+Suggests:
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
