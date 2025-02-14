@@ -8,7 +8,7 @@ lacenBootstrap(
   lacenObject,
   numberOfIterations = 100,
   maxBlockSize = 50000,
-  pathModGroupsPlot = "3_modgroups.png",
+  pathModGroupsPlot = "3_modgroupsnew.png",
   pathStabilityPlot = "4_stability_bootstrap.png",
   nThreads = 4,
   ...

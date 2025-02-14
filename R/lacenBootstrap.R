@@ -16,26 +16,31 @@
 lacenBootstrap <- function(lacenObject,
                            numberOfIterations = 100,
                            maxBlockSize = 50000,
-                           pathModGroupsPlot = "3_modgroups.png",
+                           pathModGroupsPlot = "3_modgroupsnew.png",
                            pathStabilityPlot = "4_stability_bootstrap.png",
                            nThreads = 4,
                            ...) {
+  # Create a generic function to allow method dispatch based on lacenObject class
   UseMethod("lacenBootstrap")
 }
 
 #' @export
 lacenBootstrap.lacen <- function(lacenObject,
-                                  numberOfIterations = 100,
-                                  maxBlockSize = 50000,
-                                  pathModGroupsPlot = "3_modgroups.png",
-                                  pathStabilityPlot = "4_stability_bootstrap.png",
-                                  nThreads = 4,
-                                  ...) {
-  # Extract necessary data
+                                 numberOfIterations = 100,
+                                 maxBlockSize = 50000,
+                                 pathModGroupsPlot = "3_modgroups.png",
+                                 pathStabilityPlot = "4_stability_bootstrap.png",
+                                 nThreads = 4,
+                                 ...){
+  
+  # Ensure that WGCNA uses its own correlation function instead of base cor()
+  cor <- WGCNA::cor
+  
+  # Extract the expression data and soft-thresholding power from the lacenObject
   expr_data <- lacenObject$datExpr
   soft_power <- lacenObject$indicePower
   
-  # Capture additional arguments
+  # Capture any additional arguments passed via ... and assign them as separate variables
   additional_args <- list(...)
   if (length(additional_args) > 0) {
     for (arg_name in names(additional_args)) {
@@ -43,226 +48,324 @@ lacenBootstrap.lacen <- function(lacenObject,
     }
   }
   
-  # Determine if parallel processing should be used
+  # Determine whether to use parallel processing based on nThreads.
+  # Also, configure the WGCNA threading accordingly.
   if (!exists("parallel")) {
     if (nThreads < 8) {
+      # For fewer threads, disable WGCNA internal multithreading
       WGCNA::disableWGCNAThreads()
       use_parallel <- FALSE
     } else {
+      # For sufficient threads, enable WGCNA multithreading using 4 threads
       WGCNA::enableWGCNAThreads(4)
       use_parallel <- TRUE
+      # Set the number of parallel workers based on the available threads
       num_parallel <- floor(nThreads / 4)
     }
   }
   
-  # Initialize cutBootstrap if not set
+  # If cutBootstrap is not provided in the additional arguments, set its default value
   if (!exists("cutBootstrap")) {
     cutBootstrap <- FALSE
   }
   
-  # Internal function to perform bootstrap iterations
-  perform_bootstrap <- function(iterations, expr_data, power, max_block, use_parallel, num_parallel) {
-    if (power > 0) {
-      status_message <- "Starting hierarchical clustering and module detection."
-      message(status_message)
-    }
+  # ------------------------------------------------------------------------------
+  # Nested function: makeBootstrap
+  # This function performs the bootstrapping iterations, running network construction
+  # on subsets of genes (by leaving out a subset for each iteration), either in parallel
+  # or sequentially.
+  # ------------------------------------------------------------------------------
+  makeBootstrap <- function(numberOfIterations,
+                            datExpr,
+                            indicePower,
+                            maxBlockSize,
+                            parallel,
+                            nparallel,
+                            WGCNAThreads){
     
-    bootstrap_results <- matrix(NA, nrow = iterations + 1, ncol = ncol(expr_data))
-    colnames(bootstrap_results) <- colnames(expr_data)
-    
-    # Initial module detection without bootstrap
-    initial_network <- WGCNA::blockwiseModules(
-      expr_data, 
-      power = power, 
-      maxBlockSize = max_block,
-      TOMType = "unsigned", 
-      minModuleSize = 30,
-      reassignThreshold = 0, 
-      mergeCutHeight = 0.3,
-      numericLabels = TRUE, 
-      pamRespectsDendro = FALSE,
-      verbose = 0
-    )
-    bootstrap_results[1, ] <- initial_network$colors
-    
-    # Assign each gene to a bootstrap iteration for exclusion
-    set.seed(123)  # For reproducibility
-    exclusion_assignments <- sample(rep(1:iterations, length.out = ncol(expr_data)))
-    
-    if (use_parallel) {
-      doParallel::registerDoParallel(num_parallel)
-      
-      bootstrap_parallel <- foreach::foreach(i = 1:iterations, .combine = rbind) %dopar% {
-        # Exclude specified genes for this iteration
-        genes_to_include <- exclusion_assignments != i
-        subset_expr <- expr_data[, genes_to_include, drop = FALSE]
-        
-        # Perform module detection on the subset
-        subset_network <- WGCNA::blockwiseModules(
-          subset_expr, 
-          power = power, 
-          maxBlockSize = max_block,
-          TOMType = "unsigned", 
-          minModuleSize = 30,
-          reassignThreshold = 0, 
-          mergeCutHeight = 0.3,
-          numericLabels = TRUE, 
-          pamRespectsDendro = FALSE,
-          verbose = 0
-        )
-        
-        # Assign modules, marking excluded genes as NA
-        modules_subset <- subset_network$colors
-        modules_full <- rep(NA, ncol(expr_data))
-        modules_full[genes_to_include] <- modules_subset
-        return(modules_full)
-      }
-      
-      bootstrap_results[-1, ] <- bootstrap_parallel
+    # Set WGCNA threading depending on the input parameter WGCNAThreads.
+    # If threading is effectively disabled (FALSE or 1), then disable it.
+    if(WGCNAThreads == FALSE | WGCNAThreads == 1){
+      WGCNA::disableWGCNAThreads()
     } else {
-      # Sequential processing without parallel
-      for (i in 1:iterations) {
-        genes_to_include <- exclusion_assignments != i
-        subset_expr <- expr_data[, genes_to_include, drop = FALSE]
-        subset_network <- WGCNA::blockwiseModules(
-          subset_expr, 
-          power = power, 
-          maxBlockSize = max_block,
-          TOMType = "unsigned", 
-          minModuleSize = 30,
-          reassignThreshold = 0, 
-          mergeCutHeight = 0.3,
-          numericLabels = TRUE, 
-          pamRespectsDendro = FALSE,
-          verbose = 0
-        )
-        modules_subset <- subset_network$colors
-        modules_full <- rep(NA, ncol(expr_data))
-        modules_full[genes_to_include] <- modules_subset
-        bootstrap_results[i + 1, ] <- modules_full
-      }
+      WGCNA::enableWGCNAThreads(WGCNAThreads)
     }
     
-    return(as.data.frame(bootstrap_results))
+    # If parallel processing is enabled, use foreach for iterations
+    if(isTRUE(parallel)){
+      # Register parallel backend with the specified number of workers
+      doParallel::registerDoParallel(nparallel)
+      
+      # Initialize a data frame to store bootstrap results:
+      # rows represent each bootstrap iteration, columns correspond to genes.
+      bootstrap = as.data.frame(matrix(data = NA, nrow = numberOfIterations, ncol = ncol(datExpr)))
+      colnames(bootstrap) = colnames(datExpr)
+      
+      # Run blockwiseModules on the full dataset to obtain the reference module assignment
+      net_no_bootstrap <- WGCNA::blockwiseModules(datExpr, power = indicePower, maxBlockSize = maxBlockSize,
+                                                  TOMType = "unsigned", minModuleSize = 30,
+                                                  reassignThreshold = 0, mergeCutHeight = 0.3,
+                                                  numericLabels = TRUE, pamRespectsDendro = FALSE,
+                                                  verbose = 0)
+      # Save the module assignment from the full dataset as the first line
+      first_line <- net_no_bootstrap$colors
+      
+      # Create a vector that randomly assigns each gene an iteration number
+      # in which it will be left out from the network construction.
+      this_gene_wont_be_in_iteratiom_number = sample(rep(1:numberOfIterations, 
+                                                         ceiling(dim(datExpr)[[2]]/numberOfIterations)), 
+                                                     dim(datExpr)[[2]], replace = FALSE)
+      
+      # Use foreach to iterate over the bootstrap iterations in parallel.
+      boot_foreach <- foreach::foreach(i = 1:(numberOfIterations/1)) %dopar% {
+        # For each iteration, exclude genes assigned to iteration i.
+        net = WGCNA::blockwiseModules(datExpr[,this_gene_wont_be_in_iteratiom_number != i], 
+                                      power = indicePower, maxBlockSize = maxBlockSize,
+                                      TOMType = "unsigned", minModuleSize = 30,
+                                      reassignThreshold = 0, mergeCutHeight = 0.3,
+                                      numericLabels = TRUE, pamRespectsDendro = FALSE,
+                                      verbose = 0)
+        # Initialize an empty vector to store module assignments for all genes
+        next_line = c()
+        counter = 1
+        # Reconstruct a full vector for all genes:
+        # - For genes included in the current bootstrap, assign the computed module color.
+        # - For genes left out, assign NA.
+        for(j in 1:dim(datExpr)[[2]]){
+          if(this_gene_wont_be_in_iteratiom_number[j] != i){
+            next_line = c(next_line, net$colors[counter])
+            counter = counter + 1
+          }
+          else{
+            next_line = c(next_line, NA)
+          }
+        }
+        # Return the reconstructed module assignment vector for iteration i
+        return(next_line)
+      }
+      # Combine the results from parallel iterations and transpose for proper formatting
+      boot_foreach <- t(as.data.frame(boot_foreach))
+      # Prepend the full dataset module assignment (first_line) as the first row
+      boot_foreach <- rbind(first_line, boot_foreach)
+      row.names(boot_foreach) <- 0:(nrow(boot_foreach) - 1)
+      return(boot_foreach)
+    } else {
+      # Sequential processing if parallel is not enabled
+      
+      # Initialize bootstrap data frame similar to the parallel case
+      bootstrap = as.data.frame(matrix(data = NA, nrow = numberOfIterations, ncol = ncol(datExpr)))
+      colnames(bootstrap) = colnames(datExpr)
+      
+      # Run network construction on the full dataset
+      net_no_bootstrap <- WGCNA::blockwiseModules(datExpr, power = indicePower, maxBlockSize = maxBlockSize,
+                                                  TOMType = "unsigned", minModuleSize = 30,
+                                                  reassignThreshold = 0, mergeCutHeight = 0.3,
+                                                  numericLabels = TRUE, pamRespectsDendro = FALSE,
+                                                  verbose = 0)
+      bootstrap[1,] <- net_no_bootstrap$colors
+      
+      # Create the assignment vector indicating which genes to leave out in each iteration
+      this_gene_wont_be_in_iteratiom_number = sample(rep(1:numberOfIterations, 
+                                                         ceiling(dim(datExpr)[[2]]/numberOfIterations)), 
+                                                     dim(datExpr)[[2]], replace = FALSE)
+      # Loop through each bootstrap iteration
+      for(i in 1:(numberOfIterations/1)){
+        # Exclude genes assigned to the current iteration i
+        net = WGCNA::blockwiseModules(datExpr[,this_gene_wont_be_in_iteratiom_number != i], 
+                                      power = indicePower, maxBlockSize = maxBlockSize,
+                                      TOMType = "unsigned", minModuleSize = 30,
+                                      reassignThreshold = 0, mergeCutHeight = 0.3,
+                                      numericLabels = TRUE, pamRespectsDendro = FALSE,
+                                      verbose = 0)
+        next_line = c()
+        counter = 1
+        # Reconstruct the complete vector of module assignments for all genes
+        for(j in 1:dim(datExpr)[[2]]){
+          if(this_gene_wont_be_in_iteratiom_number[j] != i){
+            next_line = c(next_line, net$colors[counter])
+            counter = counter + 1
+          }
+          else{
+            next_line = c(next_line, NA)
+          }
+        }
+        # Save the iteration result (note: row 1 is already used by the full dataset)
+        bootstrap[i+1,] <- next_line
+      }
+      return(bootstrap)
+    }
   }
   
-  # Internal function to assess module stability
-  assess_module_stability <- function(bootstrap_df, mod_groups_plot_path) {
-    # Helper function to find the most similar module
-    find_most_similar <- function(vector, list_of_vectors) {
-      similarity_scores <- sapply(list_of_vectors, function(vec) sum(vector %in% vec))
-      most_similar <- names(which.max(similarity_scores))
-      return(most_similar)
+  # ------------------------------------------------------------------------------
+  # Nested function: moduleStability
+  # This function calculates the stability of the modules across the bootstrap iterations.
+  # It constructs a list for each bootstrap iteration mapping each module to its genes,
+  # compares the modules across iterations, and produces a boxplot to visualize stability.
+  # ------------------------------------------------------------------------------
+  moduleStability <- function(bootstrap,
+                              pathModGroupsPlot){
+    # Internal helper function to find the most similar module (vector) in a list
+    # compared to the given vector, based on the number of shared genes.
+    most_similar_vector <- function(vector, list_of_vectors){
+      sim <- 0
+      most <- NULL
+      for(vec in names(list_of_vectors)){
+        if(sum(vector %in% list_of_vectors[[vec]]) > sim){
+          sim <- sum(vector %in% list_of_vectors[[vec]])
+          most <- vec
+        }
+      }
+      return(most)
+    }
+    print("Creating Module Stability Matrix (1/2)")
+    
+    # Build a list of module compositions for each bootstrap repetition.
+    bootlist <- list()
+    counter <- 0
+    totcounter <- nrow(bootstrap)
+    for(rep in 1:nrow(bootstrap)){
+      replist <- list()
+      # For each unique module label in the current iteration,
+      # record the indices of the genes assigned to that module.
+      for(mod in unique(unlist(bootstrap[rep,]))){
+        if(!is.na(mod)){
+          replist[[as.character(mod)]] <- which(bootstrap[rep,] == mod)
+        }
+      }
+      bootlist[[as.character(rep)]] <- replist
+      counter <- counter + 1
     }
     
-    message("Assessing module stability across bootstrap iterations.")
-    
-    # Initialize list to store module groups
-    module_groups <- list()
-    initial_modules <- as.character(bootstrap_df[1, ])
-    unique_modules <- unique(initial_modules)
-    unique_modules <- unique_modules[unique_modules != "0"]
-    
-    for (mod in unique_modules) {
-      module_groups[[mod]] <- mod  # Initialize with original module
-      for (i in 2:nrow(bootstrap_df)) {
-        current_modules <- unique(as.character(bootstrap_df[i, ]))
-        current_modules <- current_modules[current_modules != "0"]
-        # Find the most similar module in the current iteration
-        similar_mod <- find_most_similar(module_groups[[mod]][i - 1], current_modules)
-        module_groups[[mod]] <- c(module_groups[[mod]], similar_mod)
+    # Create a mapping (modGroups) from each module in the reference (first iteration)
+    # to a vector of module labels (one per bootstrap iteration) that are the most similar.
+    modGroups <- list()
+    for(mod in names(bootlist[[1]])){
+      modlist <- mod  # start with the module label from the first iteration
+      for(rep in bootlist[2:length(bootlist)]){
+        # Find the module label in the current iteration that is most similar to the reference module.
+        modlist <- c(modlist, most_similar_vector(bootlist[[1]][[mod]], rep))
+        modGroups[[as.character(mod)]] <- modlist
       }
     }
     
-    # Calculate stability ratios
-    stability_ratios <- sapply(colnames(bootstrap_df), function(gene) {
-      initial_mod <- as.character(bootstrap_df[1, gene])
-      if (initial_mod == "0") {
-        return(NA)
+    # Calculate stability ratios for each module across bootstrap iterations.
+    boxplotlist <- list()
+    print("Calculating Module Stability (2/2)")
+    counter <- 0
+    totcounter <- length(modGroups) * nrow(bootstrap)
+    for(mod in names(modGroups)){
+      boot <- list()
+      for(row in 1:nrow(bootstrap)){
+        # For each bootstrap iteration, find indices where the module label equals the expected label
+        boot[[row]] <- which(unlist(bootstrap[row,]) == modGroups[[mod]][row])
+        counter <- counter + 1
       }
-      assigned_mod <- module_groups[[initial_mod]]
-      return(mean(bootstrap_df[, gene] == assigned_mod))
-    })
+      # Calculate the proportion of overlapping gene indices between the full dataset (first iteration)
+      # and each bootstrap iteration (ignoring the first iteration itself).
+      boot <- unlist(lapply(boot[2:nrow(bootstrap)], function(x) sum(boot[[1]] %in% x)/length(boot[[1]])))
+      boxplotlist[[as.character(mod)]] <- boot
+    }
     
-    # Plot stability ratios
+    # Plot the stability boxplots and save to a PNG file.
     grDevices::png(filename = pathModGroupsPlot, width = 1200, height = 1200)
-    boxplot(stability_ratios ~ as.factor(bootstrap_df[1, ]),
-            main = "Module Stability",
-            xlab = "Module",
-            ylab = "Stability Ratio",
-            ylim = c(0, 1),
-            cex.lab = 2,
-            cex.axis = 2,
-            cex.main = 2,
-            cex.sub = 2)
-    abline(h = 1, lty = 3)
+    graphics::boxplot(boxplotlist[sort.int(as.numeric(names(boxplotlist)))],
+                      main="Module Stability",
+                      xlab="Module Number",
+                      ylab="Transcripts in the same module",
+                      ylim=c(0,1.2),
+                      graphics::par(yaxs='i'),
+                      graphics::par(mfrow=c(1,1)),
+                      cex.lab = 2,
+                      cex.axis = 2,
+                      cex.main = 2,
+                      cex.sub = 2)
+    graphics::abline( h = 1, lty = 3)
     grDevices::dev.off()
-    
-    return(stability_ratios)
+    return(modGroups)
   }
   
-  # Internal function to filter genes based on stability ratios
-  filter_genes_by_stability <- function(mod_groups, bootstrap_df) {
-    gene_stability <- sapply(colnames(bootstrap_df), function(gene) {
-      stability <- sum(bootstrap_df[, gene] == mod_groups[[bootstrap_df[1, gene]]][1:nrow(bootstrap_df)])
-      return(stability / nrow(bootstrap_df))
-    })
-    return(as.data.frame(gene_stability))
+  # ------------------------------------------------------------------------------
+  # Nested function: filterStability
+  # This function computes a stability ratio for each gene, defined as the proportion
+  # of bootstrap iterations in which the gene was assigned to the module indicated by modGroups.
+  # ------------------------------------------------------------------------------
+  filterStability <- function(modGroups,
+                              bootstrap){
+    names <- colnames(bootstrap)
+    sigs <- c() # To store the stability ratio for each gene
+    for(i in 1:ncol(bootstrap)){
+      gene <- bootstrap[-c(1), i]    # All bootstrap iterations (excluding the first full-data iteration)
+      module <- bootstrap[1, i]       # The reference module assignment from the full dataset
+      # Calculate the stability ratio: proportion of iterations where the gene's module
+      # equals the expected module label from modGroups.
+      sig <- sum(gene == modGroups[[as.character(module)]][-c(1)], na.rm = TRUE) / length(gene)
+      sigs <- c(sigs, sig)
+    }
+    names(sigs) <- colnames(bootstrap)
+    return(as.data.frame(sigs))
   }
   
-  # Internal function to plot stability ratios
-  plot_stability_ratios <- function(stability_ratios, cutoff, stability_plot_path) {
-    sequences <- seq(0, 1, by = 0.1)
-    cumulative_counts <- sapply(sequences, function(x) sum(stability_ratios < x, na.rm = TRUE))
-    
-    grDevices::png(filename = stability_plot_path, width = 1200, height = 1200)
-    plot(sequences, cumulative_counts, type = "b",
-         main = "Cumulative Gene Distribution by Module Stability",
-         xlab = "Stability Proportion",
-         ylab = "Cumulative Number of Genes",
+  # ------------------------------------------------------------------------------
+  # Nested function: stabilityRatioPlot
+  # This function creates a plot of the cumulative distribution of genes by their module
+  # stability proportion, optionally marking a threshold (cutBootstrap).
+  # ------------------------------------------------------------------------------
+  stabilityRatioPlot <- function(bootstrapStability,
+                                 cutBootstrap = FALSE,
+                                 pathStabilityPlot = pathStabilityPlot){
+    sigs <- bootstrapStability
+    # Define thresholds from 0 to 1 in increments of 0.1
+    seqs <- seq(0, 1, 0.1)
+    # For each threshold, count the cumulative number of genes with a stability ratio below that threshold
+    cumulativeSig <- unlist(lapply(seqs, function(x) sum(sigs < x)))
+    names(cumulativeSig) <- as.character(seqs)
+    grDevices::png(filename = pathStabilityPlot, width = 1200, height = 1200)
+    plot(x = seqs,
+         y = cumulativeSig,
+         main = "Cumulative genes distribuction by module stability proportion",
+         ylab = "Cumulative number of genes",
+         xlab = "Proportions of genes maintained in module",
          cex.lab = 2,
          cex.axis = 2,
          cex.main = 2,
          cex.sub = 2)
-    text(sequences, cumulative_counts, labels = cumulative_counts, pos = 3, cex = 1)
-    if (!isFALSE(cutoff) && is.numeric(cutoff) && cutoff >= 0 && cutoff <= 1) {
-      abline(v = cutoff, col = "red", lty = 2)
+    graphics::text(seqs, cumulativeSig, labels = cumulativeSig, cex = 1, pos = 3)
+    # If cutBootstrap is provided and is numeric, draw a vertical red line at that threshold.
+    if(!isFALSE(cutBootstrap) & !isTRUE(cutBootstrap) & is.numeric(as.numeric(cutBootstrap))){
+      graphics::abline(v = cutBootstrap, col = "red")
     }
     grDevices::dev.off()
   }
   
-  # Perform bootstrap iterations
-  bootstrap_df <- perform_bootstrap(
-    iterations = numberOfIterations,
-    expr_data = expr_data,
-    power = soft_power,
-    max_block = maxBlockSize,
-    use_parallel = use_parallel,
-    num_parallel = num_parallel
-  )
+  # ------------------------------------------------------------------------------
+  # Main processing: Run bootstrap analysis and update the lacenObject
+  # ------------------------------------------------------------------------------
   
-  # Assess module stability
-  module_groups <- assess_module_stability(
-    bootstrap_df = bootstrap_df,
-    mod_groups_plot_path = pathModGroupsPlot
-  )
+  # Generate the bootstrap table containing module assignments per iteration.
+  bootstrap <- makeBootstrap(numberOfIterations = numberOfIterations,
+                             datExpr = expr_data,
+                             indicePower = soft_power,
+                             maxBlockSize = maxBlockSize,
+                             parallel = parallel,
+                             nparallel = nparallel,
+                             WGCNAThreads = WGCNAThreads)
   
-  # Calculate stability ratios
-  bootstrap_stability <- filter_genes_by_stability(
-    mod_groups = module_groups,
-    bootstrap_df = bootstrap_df
-  )
+  # Compute the module stability groups and generate a boxplot saved to pathModGroupsPlot.
+  modGroups <- moduleStability(bootstrap = bootstrap,
+                               pathModGroupsPlot = pathModGroupsPlot)
   
-  # Plot stability ratios
-  plot_stability_ratios(
-    stability_ratios = bootstrap_stability$sigs,
-    cutoff = cutBootstrap,
-    stability_plot_path = pathStabilityPlot
-  )
+  # Calculate the stability ratio for each gene based on the modGroups and bootstrap table.
+  bootstrapStability <- filterStability(modGroups = modGroups,
+                                        bootstrap = bootstrap)
   
-  # Update lacenObject with bootstrap results
-  lacenObject$bootstrapStability <- bootstrap_stability
-  lacenObject$bootstrap <- bootstrap_df
+  # Generate the stability ratio plot and save it to pathStabilityPlot.
+  stabilityRatioPlot(bootstrapStability = bootstrapStability,
+                     cutBootstrap = cutBootstrap,
+                     pathStabilityPlot = pathStabilityPlot)
+  
+  # Update the lacenObject with the new bootstrap stability information and bootstrap table.
+  lacenObject$bootstrapStability <- bootstrapStability
+  lacenObject$bootstrap <- bootstrap
   
   return(lacenObject)
 }

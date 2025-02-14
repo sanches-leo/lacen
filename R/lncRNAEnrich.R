@@ -17,30 +17,15 @@
 #' @export
 #' @import gprofiler2 igraph ggraph scatterpie grid Polychrome
 lncRNAEnrich <- function(lncName,
-                         lacenObject,
-                         nGenes = 100,
-                         nHighlight = 10,
-                         sources = c("GO:BP", "GO:MF", "GO:CC", "KEGG", "REAC"),
-                         organism = "hsapiens",
-                         nGenesNet = 10,
-                         nTerm = 3,
-                         lncHighlight = FALSE,
-                         ...) {
-  UseMethod("lncRNAEnrich2")
-                         }
-
-
-#' @export
-lncRNAEnrich.lacen<- function(lncName,
-                         lacenObject,
-                         nGenes = 100,
-                         nHighlight = 10,
-                         sources = c("GO:BP", "GO:MF", "GO:CC", "KEGG", "REAC"),
-                         organism = "hsapiens",
-                         nGenesNet = 10,
-                         nTerm = 3,
-                         lncHighlight = FALSE,
-                         ...) {
+                              lacenObject,
+                              nGenes = 100,
+                              nHighlight = 10,
+                              sources = c("GO:BP", "GO:MF", "GO:CC", "KEGG", "REAC"),
+                              organism = "hsapiens",
+                              nGenesNet = 10,
+                              nTerm = 3,
+                              lncHighlight = FALSE,
+                              ...) {
   # Validate input parameters
   if (!is.character(lncName) || length(lncName) != 1) {
     stop("'lncName' must be a single character string.")
@@ -172,7 +157,7 @@ lncRNAEnrich.lacen<- function(lncName,
     log2FC = lacenObject$summdf$log2FC[match(names(tom_selected), lacenObject$summdf$gene_id)],
     pval = lacenObject$summdf$pval[match(names(tom_selected), lacenObject$summdf$gene_id)],
     is_deg = abs(lacenObject$summdf$log2FC[match(names(tom_selected), lacenObject$summdf$gene_id)]) >= 1 & 
-              lacenObject$summdf$pval[match(names(tom_selected), lacenObject$summdf$gene_id)] <= 0.05,
+      lacenObject$summdf$pval[match(names(tom_selected), lacenObject$summdf$gene_id)] <= 0.05,
     stringsAsFactors = FALSE
   )
   
@@ -182,9 +167,12 @@ lncRNAEnrich.lacen<- function(lncName,
   
   # Save enrichment results as CSV
   enr_csv_path <- ifelse(is.null(list(...)[["enrCsvPath"]]), "./enrichment.csv", list(...)[["enrCsvPath"]])
-  utils::write.csv(enrichment$result, file = enr_csv_path, row.names = FALSE)
+  enr_df <- as.data.frame(apply(enrichment$result,2,as.character))
+
+  utils::write.csv(enr_df, file = enr_csv_path, row.names = FALSE)
   
   # Prepare the TOM for network visualization
+  tom_matrix <- lacenObject$TOM
   tom_subset <- tom_matrix[rownames(tom_matrix) %in% genes_to_enrich,
                            colnames(tom_matrix) %in% genes_to_enrich]
   tom_subset[tom_subset < stats::median(tom_matrix, na.rm = TRUE)] <- 0
@@ -207,7 +195,7 @@ lncRNAEnrich.lacen<- function(lncName,
     for (i in 1:nrow(top_terms)) {
       term <- top_terms$term_id[i]
       genes_in_term <- unlist(strsplit(top_terms$intersection[i], ","))
-      V(graph_net)$color[V(graph_net)$name %in% genes_in_term] <- "red"
+      igraph::V(graph_net)$color[igraph::V(graph_net)$name %in% genes_in_term] <- "red"
     }
     
     # Set layout for the network
@@ -215,9 +203,9 @@ lncRNAEnrich.lacen<- function(lncName,
     
     # Generate network plot using ggraph
     network_plot <- ggraph::ggraph(layout_coords) +
-      ggraph::geom_edge_link(aes(width = weight), alpha = 0.5) +
-      ggraph::geom_node_point(aes(color = color), size = 5) +
-      ggraph::geom_node_text(aes(label = name, color = color), repel = TRUE) +
+      ggraph::geom_edge_link(ggplot2::aes(width = weight), alpha = 0.5) +
+      ggraph::geom_node_point(ggplot2::aes(color = color), size = 5) +
+      ggraph::geom_node_text(ggplot2::aes(label = name, color = color), repel = TRUE) +
       ggplot2::scale_color_manual(values = c("red" = "red", "black" = "black")) +
       ggplot2::theme_minimal() +
       ggplot2::ggtitle(paste("Network for lncRNA:", lncName)) +
