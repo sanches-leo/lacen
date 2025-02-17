@@ -1,9 +1,9 @@
 #' BRCA Gene Expression Data (Tumor vs Normal)
 #'
-#' Paired tumor-adjacent tissue RNA-seq data from TCGA BRCA project.
+#' Random subset of Paired tumor-adjacent tissue RNA-seq data from TCGA BRCA project.
 #' Processed using TCGAbiolinks with STAR counts workflow.
 #'
-#' @format A data frame with 60,616 genes (rows) and 226 samples (columns):
+#' @format A data frame with 30,000 genes (rows) and 60 samples (columns):
 #' \describe{
 #'   \item{rownames}{ENSEMBL gene IDs (e.g., "ENSG00000136158")}
 #'   \item{columns}{TCGA sample IDs (e.g., "TCGA-AC-A2FM-11B-32R-A19W-07")}
@@ -14,9 +14,9 @@
 
 #' Sample Phenotype Data
 #'
-#' Metadata for samples in datExpr indicating tumor/normal status.
+#' Metadata for samples in raw_expression indicating tumor/normal status.
 #'
-#' @format A data frame with 226 rows and 2 columns:
+#' @format A data frame with 30 rows and 2 columns:
 #' \describe{
 #'   \item{Sample}{TCGA sample ID (matches datExpr columns)}
 #'   \item{Trait}{Integer: 1 = Primary Tumor, 2 = Solid Tissue Normal}
