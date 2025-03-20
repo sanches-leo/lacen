@@ -5,6 +5,5 @@
 .DS_Store
 *.csv
 script.R
-*.png
 extras/
 *.old
