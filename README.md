@@ -1,13 +1,18 @@
-# lacen
+# lacen: An R package for integrative analysis of lncRNA Expression Networks
 
 ## Introduction
 
-`lacen` is an R package designed for analyzing gene expression data, with a focus on long non-coding RNAs (lncRNAs) and weighted gene co-expression network analysis (WGCNA).
-It facilitates data handling, transformation and network construction, ensuring robust stability assessment through bootstrap analysis. It follows a simple and linear pipeline enabling an easy handling, mainly to users that dont have strong programming background. The package was built to work with human cancer datasets, but works well with datasets from several contexts, the only request is that expression data is from samples of two or more conditions, and the input files follows the required format. Beyound human data, `lacen`accepts the most common used organisms, following the [OrgDb bioconductor](https://www.bioconductor.org/packages/release/BiocViews.html#___OrgDb) supported organisms.
+`lacen` is a dedicated R software package developed to facilitate integrative analysis of gene expression data, focusing specifically on the elucidation of functional roles for long non-coding RNAs (lncRNAs) through weighted gene co-expression network analysis (WGCNA). 
+
+The package offers an intuitive, structured, and robust workflow that seamlessly integrates data handling, transformation, and network construction steps and includes advanced stability checks via bootstrap analyses. `lacen` is designed to be user-friendly and accessible, even for researchers without extensive computational or programming experience, guiding users through a clear and consistent analysis pathway.
+
+Although initially optimized using human cancer RNA-seq datasets, the package is not limited to oncological studies and can handle data from numerous experimental contexts and organisms. The only strict requirements are that the input RNA-seq expression profiles must represent at least two sample conditions (for instance, two different biological or clinical groups), and input files must conform to the required format. Beyond human datasets, `lacen` supports most widely-researched organisms included in [Bioconductor's OrgDb annotation packages](https://www.bioconductor.org/packages/release/BiocViews.html#___OrgDb).
+
+---
 
 ## Installation
 
-`lacen` is not currently available in CRAN. To ensure all Bioconductor dependencies are installed, use BiocManager:
+`lacen` is currently not available in the Comprehensive R Archive Network (CRAN). Instead, the development version can be installed directly via BiocManager, ensuring the appropriate installation of all Bioconductor dependencies:
 
 ```r
 if (!require("BiocManager", quietly = TRUE))
@@ -15,19 +20,29 @@ if (!require("BiocManager", quietly = TRUE))
 BiocManager::install("sanches-leo/lacen")
 ```
 
-## Loading the Data
+---
 
-As input, `lacen`requires five different files: 
-    - The count dataframe, composed by the RNA-seq raw counts with the genes in the rows and samples in the columns. The gene name/ID should be in the row names and the sample names or ID in the column names.
-    - The traits dataframe, indicating the which class does the sample is.  A two column dataframe, with the sample ID in the "Sample" column and the condition code on the "Trait" column. The conditions must be numeric codified, with each number indicating a different condition.
-    - A differential expression dataframe. The user can use the standard Limma differential expression output, or give a dataframe with the columns "ID", "log2FC" and "pvalue", in this order.
-    - The gene annotation data, a two columns dataframe with sequence IDs on "gene_id" column and Gene names on "gene_name" column. This dataframe can be obtained using `loadGTF()` to open an GTF file annotation or `downloadGTF()` the annotation using an web link.
-    - The non-coding data, a subset of "annotationData" with only the non coding RNAs.
-    
-Obs: In the case of the user uses directly the gene name/symbol, both gene_id and gene_name columns could repeat the same gene_symbol.
-    
-    
-The package includes a pre-processed TCGA reduced dataset to test, which can be loaded as follows:
+## Input Data Requirements
+
+The `lacen` package requires five input datasets to commence analysis:
+
+1. **Expression Counts Dataframe** (`datCounts`): A matrix/dataframe composed of raw RNA-seq counts, structured with genes as rows and samples as columns. Gene identifiers (gene symbols or IDs) should be used as row names, and sample identifiers should appear as column names.
+
+2. **Experimental Conditions Dataframe (Traits)** (`datTraits`): A two-column dataframe specifying sample identifiers and their respective experimental condition labels. Columns must be explicitly named `"Sample"` (sample identifier) and `"Trait"` (numeric condition/group identifier), respectively. Experimental conditions must be numerically encoded (e.g., "0" and "1" for two different groups).
+
+3. **Differential Expression Results** (`datExpression`): A dataframe summarizing differential expression analysis results. By default, standard outputs from tools such as Limma can be directly used. Alternatively, the dataframe can include three required columns: `"ID"` (gene identifier), `"log2FC"` (log2 fold-change between conditions), and `"pvalue"` (statistical significance), arranged in this exact order.
+
+4. **Gene Annotation Data** (`annotationData`): A two-column dataframe linking gene identifiers to gene names, with columns specifically labeled `"gene_id"` and `"gene_name"`. Annotation data can be directly loaded from a GTF file using included utility functions (`loadGTF()` or `downloadGTF()` functions). 
+   - **Note**: if analysis is based solely on gene symbols, both columns might replicate the same symbol.
+
+5. **Non-coding RNA Annotation Dataframe** (`ncAnnotation`): A specific subset of the annotation data (`annotationData`) containing only long non-coding RNA entries.
+
+
+---
+
+## Example Data (Test Dataset)
+
+The `lacen` package provides a pre-processed and reduced subset of TCGA breast carcinoma (BRCA) RNA-seq data to facilitate familiarity and testing. Load example datasets conveniently using:
 
 ```r
 library(lacen)
@@ -37,11 +52,14 @@ data("nc_annotation")
 data("raw_expression")
 data("traits")
 ```
-Obs.: This data is a random subset of Paired tumor-adjacent tissue RNA-seq data from TCGA BRCA project. It was processed using TCGAbiolinks with STAR counts workflow. The full dataset script download is available by request.
 
-## Creating a lacen Object
+**Note**: The provided example datasets represent randomly selected paired tumor-adjacent tissue samples derived from the TCGA BRCA project, processed using the STAR alignment pipeline available through the TCGAbiolinks package. Procedures to obtain and preprocess the TCGA data can be provided by request.
 
-All data is handled within a `lacen-type S3 object`. The `initLacen` function initializes the object by integrating gene expression data, differential expression analysis, sample conditions, and gene annotation.
+---
+
+## Creating the `lacen` Object
+
+All analysis steps are encapsulated within a convenient S3 object. Begin by consolidating your data into one structured object using `initLacen`:
 
 ```r
 lacenObject <- initLacen(annotationData = annotation_data,
@@ -51,17 +69,21 @@ lacenObject <- initLacen(annotationData = annotation_data,
                          ncAnnotation = nc_annotation)
 ```
 
-## Checking Data Format
+---
 
-To ensure data compatibility, the `checkData` function verifies that all input datasets conform to the expected structure.
+## Data Integrity Check
+
+Ensure your data is compatible with `lacen` standards by running:
 
 ```r
 checkData(lacenObject)
 ```
 
-## Filtering and Transforming Data
+---
 
-The `filterTransform` function removes genes with low variation to prepare data for the network buinding. It allows filtering based on the expression variance of differentially expressed genes (DEGs) or the most variable genes (MAD) while applying necessary transformations.
+## Data Filtering and Transformation
+
+The `filterTransform` function prepares the data for network construction by filtering low-variation genes. Users can select filtering criteria based on either differentially expressed genes (DEGs) or the median absolute deviation (MAD):
 
 ```r
 lacenObject <- filterTransform(lacenObject = lacenObject,
@@ -70,13 +92,19 @@ lacenObject <- filterTransform(lacenObject = lacenObject,
                                filterMethod = "DEG")
 ```
 
-Alternatively, the user can also input a personalized filtered and transformed data frame `lacenObject$datExpr <- filteredDataFrame`, with the sample names as column names and gene names as row names.
+Alternatively, manually filtered data frames can be directly integrated:
 
+```r
+lacenObject$datExpr <- filteredDataFrame
+```
 
+Ensure your data frame maintains genes as rows and samples as columns.
 
-## Removing outliers
+---
 
-This function relies on WGCNA to plot the samples cluster Tree, helping to find the height value to exclude outlier samples.
+## Outlier Detection and Removal
+
+To visualize and identify outlier samples, generate a hierarchical cluster dendrogram:
 
 ```r
 selectOutlierSample(lacenObject, height = FALSE)
@@ -84,7 +112,7 @@ selectOutlierSample(lacenObject, height = FALSE)
 
 ![Figure 1: Cluster Tree](figures/1a_clusterTree.png)
 
-When height is provided, the function will return the samples to keep.
+Adjust the `height` parameter to define a threshold for removing outlier samples. For example, if `height = 270` identifies suitable outliers:
 
 ```r
 selectOutlierSample(lacenObject, height = 270)
@@ -92,90 +120,95 @@ selectOutlierSample(lacenObject, height = 270)
 
 ![Figure 2: Cluster Tree with height](figures/1b_clusterTree.png)
 
-
-To confirm the choose height, use `cutOutlierSample` to update it in the lacen object.
+To apply this threshold and update your object:
 
 ```r
 lacenObject <- cutOutlierSample(lacenObject, height = 270)
 ```
 
+---
 
-## Picking the Beta-Value
+## Selecting the Optimal Soft-Threshold (Beta)
 
-To ensure the generated network will follow a scale-free topology, the choose soft-threshold should maximize the model fit ($R^2$) while minimizing the number of connections lost. 
+Selecting an appropriate soft-threshold power ensures a scale-free topology for your network:
 
 ```r
 plotSoftThreshold(lacenObject,
-                  filename = "2_indicePower.png",
-                  maxBlockSize = 16000,
-                  plot = TRUE
-)
+                  filename = "soft_threshold_plot.png")
 ```
 
 ![Figure 3: Soft Threshold](figures/2_indicePower.png)
 
-In this example, the value that maximizes the model fit to a scale-free topology is close to 15.
+Inspect the resulting plot and choose the power value maximizing the model fit ($R^2$). Suppose the optimal value is 15:
 
 ```r
-lacenObject <- selectSoftThreshold(lacenObject = lacenObject,
-                                   indicePower = 15)
+lacenObject <- selectSoftThreshold(lacenObject, indicePower = 15)
 ```
 
-After choosing the soft threshold value, confirm it using `selectSoftThreshold`.
+---
 
-## Bootstrapping
+## Bootstrap Stability Analysis
 
-The bootstrap function makes the network n times, removing 1/n genes each repetition. Consequently, the less stable genes can be removed from the analysis.
+Assess the robustness of the gene network using the bootstrap method. This approach repeatedly builds networks, omitting subsets of genes to identify consistently stable modules:
 
-```lacenObject <- lacenBootstrap(lacenObject = lacenObject)```
-
+```r
+lacenObject <- lacenBootstrap(lacenObject = lacenObject)
+```
 
 ![Figure 4: Bootstrap - Module Groups](figures/3_modgroups.png)
 
 ![Figure 5: Bootstrap - Stability](figures/4_stability_bootstrap.png)
 
-
-After analyzing the figures, the user can set the value of `setBootstrap` to remove genes less stable than this threshold.
+Review the provided stability plots, then specify a stability cutoff to retain robust genes:
 
 ```r
 lacenObject <- setBootstrap(lacenObject = lacenObject, cutBootstrap = 10)
 ```
 
-## Final network
+---
 
-The lacen core function automatically generates the final network, enrich the modules based on the given database, and returns the reduced enrichment as a png.
+## Final Network Construction and Enrichment Analysis
+
+The core function of LACEN automatically constructs the final network, performs functional enrichment of the identified modules using the specified database, and generates a visual representation of the reduced enrichment results as a PNG file.
 
 ```r
 lacenObject <- summarizeAndEnrichModules(lacenObject = lacenObject)
 ```
 
-An enriched tree plot will be generated with the reduced enrichment of the modules, with the following information:
-1- Module number
-2- Module correlation with the trait and the correlation pvalue.
-3- Submodule number
-4- Submodule reduced enrichment description
-5- Number of lncRNAs DEG over the lncRNAs highly connected with the submodule.
+The generated tree plot provides a structured summary of the functional enrichment of the network modules, containing the following key information:
 
-Obs.: As we expect that the lncRNAs has no described function in the enrichment databases, the guilty by association approach assumes that the lncRNA may have the same function as its co-expressed genes from the same module/submodule. Once the lncRNA may be highly connected with several submodules, there may be overlap between those lncrnas from several submodules.
+- Module Number – The identifier for the coexpression module.
+- Module-Trait Association – The correlation value between the module and the phenotype/trait of interest, along with its associated p-value.
+- Submodule Number – Identifies distinct submodules within a module.
+- Reduced Enrichment Description – The summarized functional categories significantly enriched in each submodule after redundancy reduction.
+- lncRNA Composition – The number of differentially expressed lncRNAs (DEGs) among the highly connected lncRNAs within the submodule.
 
 ![Figure 6: Enriched Modules](figures/5_enrichedgraph.png)
 
+> **Note:** Since lncRNAs often lack functional annotations in standard enrichment databases, LACEN applies a guilt-by-association approach. This assumes that an lncRNA may share similar biological roles with its coexpressed protein-coding genes within the same module or submodule. Given that highly connected lncRNAs can be associated with multiple submodules, there may be overlaps between lncRNAs across different submodules. This reflects the complexity of lncRNA functional associations and provides additional insights into their potential biological roles.
 
-## Modules Summarization
 
-The modules are also summarized in a barplot as its protein-coding/non-coding genes and the trait-module correlation.
+---
+
+## Module Composition Visualization
+
+Visualize module composition by protein-coding and lncRNA content alongside trait-module relationships:
 
 ```r
-stackedBarplot(lacenObject = lacenObject,
-               filename = "6_stackedplot_desk.png",
-               plot = TRUE)
+stackedBarplot(lacenObject, filename = "modules_summary.png", plot = TRUE)
 ```
 
 ![Figure 7: Module Composition](figures/6_stackedplot_desk.png)
 
-## Enriched modules heatmap
+---
 
-This function generates a heatmap of a given module or module/submodule. The figure will exhibits the interconnectedness based on the topological overlap matrix between the lncRNAs and the protein coding genes. Following this approach, the usar may select lncRNAs highly connect within the module/submodule, and analyse its protein coding co-expressed genes.
+## Module-specific Connectivity Heatmaps
+
+This function generates a heatmap for a selected module or module/submodule, visualizing the interconnectedness of genes based on the topological overlap matrix (TOM). The heatmap highlights the coexpression relationships between lncRNAs and protein-coding genes, helping to identify highly connected lncRNAs within the network.
+
+By analyzing these highly connected lncRNAs, users can investigate their co-expressed protein-coding genes and infer potential functional roles using a guilt-by-association approach.
+
+For example, to examine Module 6, a small module with a strong correlation to the trait of interest, run:
 
 ```r
 heatmapTopConnectivity(lacenObject = lacenObject,
@@ -186,19 +219,26 @@ heatmapTopConnectivity(lacenObject = lacenObject,
 
 ![Figure 8: Connectivity Heatmap](figures/7_heatmap.png)
 
-## lncRNA centered network
+---
 
-If the user is interest in lncRNAs that not clusterize in the modules or are not kept by the filters, `lacen` offers an alternative to analyse the most connected genes with the lncRNA of interest, plotting the network and enriching this subnetwork as well. 
-Based on a lncRNA identifier and a LACEN object containing coexpression network data, and performs functional enrichment analysis based on the genes most highly correlated with the given lncRNA. It identifies the most connected genes with the specified lncRNA using the topological overlap matrix (TOM), enriches this group for functional terms such as Gene Ontology (GO) biological processes, molecular functions, cellular components, KEGG pathways, and Reactome pathways, and visualizes the resulting network and enrichment graph.
-Obs.: This function should be used cautiously, once that as it ignores the module structure, it may be biased to the local hubs of the neighborhood.
+## lncRNA-Centric Network Analysis
+
+For cases where an lncRNA does not cluster into any module or is filtered out by the standard module selection criteria, LACEN provides an alternative approach to analyze its connectivity. This function identifies the most connected genes associated with a specific lncRNA, generates a subnetwork visualization, and performs functional enrichment analysis.
+
+Using a given lncRNA identifier and a LACEN object containing the coexpression network data, the function:
+
+- Identifies the most highly correlated genes with the selected lncRNA using the topological overlap matrix (TOM).
+- Performs functional enrichment analysis of this gene set, identifying enriched terms from:
+    - Gene Ontology (GO): Biological Processes, Molecular Functions, Cellular Components.
+    - Pathways: KEGG and Reactome.
+- Generates a network plot showing the strongest coexpression relationships.
+- Visualizes the enrichment results, helping to infer potential functions of the lncRNA.
+
+To analyze the lncRNA "LINC01614", run:
 
 ```r
-lncRNAEnrich(lncName = "LINC00665",
-             lacenObject = lacenObject,
-             nGenes = 300,
-             nHighlight = 32,
-             nGenesNet = 50,
-             lncHighlight = FALSE)
+lncRNAEnrich(lncName = "LINC01614",
+             lacenObject = lacenObject)
 ```
 
 ![Figure 9: LINC01614 network](figures/LINC01614_net.png)
@@ -206,29 +246,17 @@ lncRNAEnrich(lncName = "LINC00665",
 ![Figure 10: LINC01614 enrichment](figures/LINC01614_enr.png)
 
 
-## R Dependencies
+## R Package Dependencies
 
-    WGCNA,
-    ggplot2,
-    gprofiler2,
-    fastcluster,
-    rrvgo,
-    limma,
-    rtracklayer,
-    foreach,
-    doParallel,
-    Polychrome,
-    ggraph,
-    graphlayouts,
-    igraph,
-    scatterpie,
-    org.Hs.eg.db,
-    methods,
-    utils,
-    stats,
-    parallel
+`lacen` depends on several widely accessible bioinformatics and visualization packages:
 
-## Session Info
+- **Core Bioinformatics and analysis**: `WGCNA`, `limma`, `rtracklayer`, `gprofiler2`, `rrvgo`, `org.Hs.eg.db`
+- **Parallelization and Speedup**: `foreach`, `doParallel`, `fastcluster`
+- **Visualization**: `ggplot2`, `ggraph`, `igraph`, `scatterpie`, `Polychrome`
+
+---
+
+## Session and Environment Information
 
 ```
 R version 4.4.3 (2025-02-28)
@@ -296,3 +324,4 @@ loaded via a namespace (and not attached):
 [157] statmod_1.5.0               shiny_1.10.0                SummarizedExperiment_1.34.0 igraph_2.1.4               
 [161] memoise_2.0.1               bit_4.5.0.1   
 ```
+
