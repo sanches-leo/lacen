@@ -5,7 +5,7 @@
 \alias{traits}
 \title{Sample Phenotype Data}
 \format{
-A data frame with 226 rows and 2 columns:
+A data frame with 30 rows and 2 columns:
 \describe{
 \item{Sample}{TCGA sample ID (matches datExpr columns)}
 \item{Trait}{Integer: 1 = Primary Tumor, 2 = Solid Tissue Normal}
@@ -18,6 +18,6 @@ Derived from TCGA metadata during datExpr processing
 traits
 }
 \description{
-Metadata for samples in datExpr indicating tumor/normal status.
+Metadata for samples in raw_expression indicating tumor/normal status.
 }
 \keyword{datasets}

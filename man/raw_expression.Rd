@@ -5,7 +5,7 @@
 \alias{raw_expression}
 \title{BRCA Gene Expression Data (Tumor vs Normal)}
 \format{
-A data frame with 60,616 genes (rows) and 226 samples (columns):
+A data frame with 30,000 genes (rows) and 60 samples (columns):
 \describe{
 \item{rownames}{ENSEMBL gene IDs (e.g., "ENSG00000136158")}
 \item{columns}{TCGA sample IDs (e.g., "TCGA-AC-A2FM-11B-32R-A19W-07")}
@@ -19,7 +19,7 @@ Processed from TCGA-BRCA data
 raw_expression
 }
 \description{
-Paired tumor-adjacent tissue RNA-seq data from TCGA BRCA project.
+Random subset of Paired tumor-adjacent tissue RNA-seq data from TCGA BRCA project.
 Processed using TCGAbiolinks with STAR counts workflow.
 }
 \keyword{datasets}
