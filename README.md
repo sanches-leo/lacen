@@ -162,7 +162,7 @@ lacenObject <- lacenBootstrap(lacenObject = lacenObject)
 Review the provided stability plots, then specify a stability cutoff to retain robust genes:
 
 ```r
-lacenObject <- setBootstrap(lacenObject = lacenObject, cutBootstrap = 10)
+lacenObject <- setBootstrap(lacenObject = lacenObject, cutBootstrap = 0.1)
 ```
 
 ---
