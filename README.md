@@ -252,7 +252,7 @@ lncRNAEnrich(lncName = "LINC01614",
 
 - **Core Bioinformatics and analysis**: `WGCNA`, `limma`, `rtracklayer`, `gprofiler2`, `rrvgo`, `org.Hs.eg.db`
 - **Parallelization and Speedup**: `foreach`, `doParallel`, `fastcluster`
-- **Visualization**: `ggplot2`, `ggraph`, `igraph`, `scatterpie`, `Polychrome`
+- **Visualization**: `ggplot2`, `ggraph`, `igraph`, `scatterpie`
 
 ---
 

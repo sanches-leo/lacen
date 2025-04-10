@@ -30,7 +30,6 @@ Imports:
     rtracklayer,
     foreach,
     doParallel,
-    Polychrome,
     ggraph,
     graphlayouts,
     igraph,

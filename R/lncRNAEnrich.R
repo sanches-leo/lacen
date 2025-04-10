@@ -15,17 +15,17 @@
 #'
 #' @return None (plots and saves enrichment results and network).
 #' @export
-#' @import gprofiler2 igraph ggraph scatterpie grid Polychrome
+#' @import gprofiler2 igraph ggraph scatterpie grid
 lncRNAEnrich <- function(lncName,
-                              lacenObject,
-                              nGenes = 100,
-                              nHighlight = 10,
-                              sources = c("GO:BP", "GO:MF", "GO:CC", "KEGG", "REAC"),
-                              organism = "hsapiens",
-                              nGenesNet = 10,
-                              nTerm = 3,
-                              lncHighlight = FALSE,
-                              ...) {
+                         lacenObject,
+                         nGenes = 100,
+                         nHighlight = 10,
+                         sources = c("GO:BP", "GO:MF", "GO:CC", "KEGG", "REAC"),
+                         organism = "hsapiens",
+                         nGenesNet = 10,
+                         nTerm = 3,
+                         lncHighlight = FALSE,
+                         ...) {
   # Validate input parameters
   if (!is.character(lncName) || length(lncName) != 1) {
     stop("'lncName' must be a single character string.")
@@ -227,15 +227,8 @@ lncRNAEnrich <- function(lncName,
       term <- paste(term, " (", length(enr_int),"/", length(genes_to_enrich),")", sep = "")
       graph_net <- igraph::set_vertex_attr(graph_net, term, index = igraph::V(graph_net), intersection)
       enrichment_categories <- c(enrichment_categories, term)
-      is_enriched_node <- rbind(no_term, intersection)
+      no_term <- rbind(no_term, intersection)
     }
-
-    # Assign 0 to the non enriched nodes
-    is_enriched_node <- colSums(is_enriched_node)
-    is_enriched_node <- ifelse(is_enriched_node == 0, 1, 0)
-    graph_net <- igraph::set_vertex_attr(graph_net, "no enriched term", index = igraph::V(graph_net), is_enriched_node)
-    enrichment_categories <- c("no enriched term", enrichment_categories)
-
 
     # Set layout for the network
     layout_coords <- graphlayouts::layout_with_stress(graph_net)
@@ -251,9 +244,67 @@ lncRNAEnrich <- function(lncName,
     if(isTRUE(lncHighlight)){
       igraph::V(graph_net)$lcolor[igraph::V(graph_net)$label %in% lacenObject$ncAnnotation$gene_id] <- "red"
     }
-    igraph::V(graph_net)$lcolor[igraph::V(graph_net)$label == lncName] <- "red4"
+    # igraph::V(graph_net)$lcolor[igraph::V(graph_net)$label == lncName] <- "red4"
 
+    # Assign lncRNA query to network (red)
+    # is_query <- as.numeric(lncName == igraph::V(graph_net)$label)
+    # graph_net <- igraph::set_vertex_attr(graph_net, "lncRNA query", index = igraph::V(graph_net), is_query)
+    # enrichment_categories <- c("lncRNA query", enrichment_categories)
 
+    # Assign 0 to the non enriched nodes
+    is_enriched_node <- colSums(no_term)
+    is_enriched_node <- ifelse(is_enriched_node == 0, 1, 0)
+    is_enriched_node[which((lncName == igraph::V(graph_net)$label))] <- 0
+    graph_net <- igraph::set_vertex_attr(graph_net, "no enriched term", index = igraph::V(graph_net), is_enriched_node)
+    enrichment_categories <- c("no enriched term", enrichment_categories)
+
+    # Create a dataframe with the coordinates of nc nodes
+    igraph::V(graph_net)$is_nc <- as.numeric(connectivity_df$is_nc[match(igraph::V(graph_net)$label,
+                                                                         connectivity_df$gene_name)])
+    subgraph_nc <- data.frame(x = igraph::V(graph_net)$x,
+                              y = igraph::V(graph_net)$y,
+                              label = igraph::V(graph_net)$label,
+                              is_nc = as.numeric(igraph::V(graph_net)$is_nc))
+    subgraph_nc <- subgraph_nc[subgraph_nc$is_nc == 1, ]
+
+    # Create and filter the color palette
+    path_pal <- c('#38871C',
+                  '#3D7CAC',
+                  '#AF4BB4',
+                  '#A1683B',
+                  '#EE002E',
+                  '#2A26FB',
+                  '#D20D7F',
+                  '#3B4738',
+                  '#C74D00',
+                  '#BE16F6',
+                  '#620038',
+                  '#0016AD',
+                  '#886A90',
+                  '#D80DB2',
+                  '#9F3242',
+                  '#7A7A2E',
+                  '#1C1C62',
+                  '#0D866C',
+                  '#C60045',
+                  '#B44288',
+                  '#9856D7',
+                  '#2675DE',
+                  '#7960AD',
+                  '#C90DD1',
+                  '#94686A',
+                  '#22606E',
+                  '#661669',
+                  '#5A2A00',
+                  '#8422E7',
+                  '#472E45',
+                  '#AD5870',
+                  '#3B6322',
+                  '#B65C38',
+                  '#CF2A0D',
+                  '#A35697',
+                  '#510080')
+    path_pal <- path_pal[seq(1,(length(enrichment_categories)-1))]
 
     # Generate network plot using ggraph
 
@@ -265,7 +316,7 @@ lncRNAEnrich <- function(lncName,
         ggraph::geom_edge_link0(alpha = .25,
                                 ggplot2::aes(width = weight),
                                 show.legend = F) +
-        ggraph::scale_edge_width(range = c(0, 2))+
+        ggraph::scale_edge_width(range = c(0.5, 2.5))+
         scatterpie::geom_scatterpie(
           cols = enrichment_categories,
           data = igraph::as_data_frame(graph_net, "vertices"),
@@ -274,7 +325,14 @@ lncRNAEnrich <- function(lncName,
           legend_name = "GO"
         ) +
         ggplot2::scale_fill_manual(values = c("#808080",
-                                              unname(unlist(Polychrome::glasbey.colors(length(enrichment_categories)-1))))) +
+                                              path_pal)) +
+        ggraph::geom_node_point(data = subgraph_nc,
+                                ggplot2::aes(x = x, y = y),
+                                shape = 23,
+                                size = 30,
+                                show.legend = FALSE,
+                                fill = "#808080",
+                                colour = "#808080") +
         ggplot2::coord_fixed() +
         ggraph::geom_node_text(ggplot2::aes(label = label),
                                repel = FALSE,
@@ -295,3 +353,4 @@ lncRNAEnrich <- function(lncName,
     invisible(grDevices::dev.off())
   }
 }
+
