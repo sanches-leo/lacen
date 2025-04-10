@@ -208,7 +208,7 @@ lncRNAEnrich <- function(lncName,
 
   if (!is.null(enrichment)) {
     # Select top nTerm enrichment terms
-    top_terms <- head(enrichment$result, n = nTerm)
+    top_terms <- utils::head(enrichment$result, n = nTerm)
 
     # Assign module attributes to nodes based on enrichment
 

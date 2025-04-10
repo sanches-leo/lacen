@@ -303,7 +303,7 @@ summarizeAndEnrichModules.lacen <- function(lacenObject,
                                                 method = "Rel")
 
         # Assign scores based on p-values
-        scores <- setNames(-log10(enrichment_data$p_value), enrichment_data$term_id)
+        scores <- stats::setNames(-log10(enrichment_data$p_value), enrichment_data$term_id)
 
         # Reduce the similarity matrix
         reduced_terms <- rrvgo::reduceSimMatrix(sim_matrix,

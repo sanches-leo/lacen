@@ -27,7 +27,7 @@ filterTransform.lacen <- function(lacenObject,
   # Extract necessary data from lacenObject
   expression_data <- lacenObject$datExpression
   count_data <- lacenObject$datCounts
-  
+
   # Internal function to filter DEGs based on p-value and fold change thresholds
   filter_DEGs <- function(expr_data, p_thresh, fc_thresh) {
     significant <- expr_data$pval < p_thresh & !is.na(expr_data$pval)
@@ -35,7 +35,7 @@ filterTransform.lacen <- function(lacenObject,
     deg <- expr_data[significant & high_fc, ]
     return(deg)
   }
-  
+
   # Internal function to select top variable genes by MAD
   select_by_variance <- function(count_data, top_var) {
     # Calculate Median Absolute Deviation (MAD) for each gene
@@ -45,31 +45,31 @@ filterTransform.lacen <- function(lacenObject,
     filtered_data <- count_data[rownames(count_data) %in% top_genes, ]
     return(filtered_data)
   }
-  
+
   # Internal function to filter counts by DEG standard deviation
   filter_counts_by_deg_sd <- function(count_data, deg_data) {
     # Calculate standard deviation for each gene
     gene_sd <- apply(count_data, 1, stats::sd, na.rm = TRUE)
     count_data$SD <- gene_sd
     # Merge DEG data with standard deviations
-    deg_sd <- merge(deg_data[, c("gene_id", "log2FC")], 
+    deg_sd <- merge(deg_data[, c("gene_id", "log2FC")],
                     data.frame(gene_id = rownames(count_data), SD = gene_sd),
                     by = "gene_id")
     # Determine the 1st percentile SD threshold
-    sd_threshold <- quantile(deg_sd$SD, probs = 0.01, na.rm = TRUE)
+    sd_threshold <- stats::quantile(deg_sd$SD, probs = 0.01, na.rm = TRUE)
     # Filter genes with SD above the threshold
     filtered_counts <- count_data[count_data$SD > sd_threshold, -ncol(count_data)]
     return(filtered_counts)
   }
-  
+
   # Ensure at least 1/4 of samples have expression > 1
   required_expressions <- ceiling((ncol(count_data) - 1) / 4)
   keep_genes <- apply(count_data[, -1], 1, function(x) sum(x > 1) > required_expressions)
   count_data <- count_data[keep_genes, ]
-  
+
   if (filterMethod == "DEG") {
     # Filter DEGs
-    degs <- filter_DEGs(expression_data[expression_data$gene_id %in% rownames(count_data), ], 
+    degs <- filter_DEGs(expression_data[expression_data$gene_id %in% rownames(count_data), ],
                        pThreshold, fcThreshold)
     # Further filter counts based on DEG SD
     filtered_expr <- filter_counts_by_deg_sd(count_data, degs)
@@ -79,11 +79,11 @@ filterTransform.lacen <- function(lacenObject,
   } else {
     stop("Invalid filterMethod. Choose 'DEG' or 'var'.")
   }
-  
+
   # Apply voom transformation using limma
   voom_transformed <- limma::voom(t(filtered_expr))$E
   voom_matrix <- data.matrix(voom_transformed, rownames.force = TRUE)
-  
+
   # Update the lacenObject with the transformed expression data
   lacenObject$datExpr <- voom_matrix
   return(lacenObject)

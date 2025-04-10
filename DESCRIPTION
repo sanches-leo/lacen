@@ -1,6 +1,6 @@
 Package: lacen
 Title: lncRNA Annotation Co-Expression Network tool
-Version: 0.0.3
+Version: 0.1.0
 Authors@R: 
     person("Leonardo", "Sanches", 
            email = "leonardo2.sanches@usp.br", 
@@ -38,7 +38,8 @@ Imports:
     methods,
     utils,
     stats,
-    parallel
+    parallel,
+    GOSemSim
 Suggests:
     testthat (>= 3.0.0),
     knitr,
