@@ -17,15 +17,15 @@
 #' @export
 #' @import gprofiler2 igraph ggraph scatterpie grid
 lncRNAEnrich <- function(lncName,
-                         lacenObject,
-                         nGenes = 100,
-                         nHighlight = 10,
-                         sources = c("GO:BP", "GO:MF", "GO:CC", "KEGG", "REAC"),
-                         organism = "hsapiens",
-                         nGenesNet = 10,
-                         nTerm = 3,
-                         lncHighlight = FALSE,
-                         ...) {
+                          lacenObject,
+                          nGenes = 100,
+                          nHighlight = 10,
+                          sources = c("GO:BP", "GO:MF", "GO:CC", "KEGG", "REAC"),
+                          organism = "hsapiens",
+                          nGenesNet = 10,
+                          nTerm = 3,
+                          lncHighlight = FALSE,
+                          ...) {
   # Validate input parameters
   if (!is.character(lncName) || length(lncName) != 1) {
     stop("'lncName' must be a single character string.")
@@ -108,8 +108,10 @@ lncRNAEnrich <- function(lncName,
   if (nGenes == "OM") {
     nGenes <- length(tom_selected)
   } else if (length(tom_selected) < nGenes) {
-    message(paste("Only ", length(tom_selected), " genes available with connectivity above the median. Setting nGenes to this value.", sep = ""))
-    nGenes <- length(tom_selected)
+    message(paste("Only ", length(tom_selected), " genes available with connectivity above the median. Setting nGenes and nGenesNet to this value.", sep = ""))
+    nGenes <- length(tom_selected) }
+  if (nGenesNet > nGenes){
+    nGenesNet <- nGenes
   }
 
   # Select top nGenes based on connectivity
@@ -192,8 +194,8 @@ lncRNAEnrich <- function(lncName,
 
   # Prepare the TOM for network visualization
   tom_matrix <- lacenObject$TOM
-  tom_subset <- tom_matrix[rownames(tom_matrix) %in% genes_to_enrich[1:nGenesNet],
-                           colnames(tom_matrix) %in% genes_to_enrich[1:nGenesNet]]
+  tom_subset <- tom_matrix[rownames(tom_matrix) %in% genes_to_enrich[1:nGenes],
+                           colnames(tom_matrix) %in% genes_to_enrich[1:nGenes]]
   tom_subset[tom_subset < stats::median(tom_matrix, na.rm = TRUE)] <- 0
   diag(tom_subset) <- 0  # Remove self-connections
 
@@ -201,9 +203,9 @@ lncRNAEnrich <- function(lncName,
   graph_net <- igraph::graph_from_adjacency_matrix(tom_subset, mode = "undirected", weighted = TRUE)
 
   # Limit the number of terms if it exceeds the maximum allowed
-  if (nTerm > 32) {
-    warning("nTerm exceeds the maximum allowed (32). Setting nTerm to 32.")
-    nTerm <- 32
+  if (nTerm > 20) {
+    warning("nTerm exceeds the maximum allowed (20). Setting nTerm to 20.")
+    nTerm <- 20
   }
 
   if (!is.null(enrichment)) {
@@ -220,8 +222,31 @@ lncRNAEnrich <- function(lncName,
 
     enrichment_categories <- c()
     no_term <- matrix(nrow = 0, ncol = nGenesNet)
+
+    # if(base::startsWith(x = sources, prefix = "GO") & organism == "hsapiens"){
+    #   ont <- unlist(base::strsplit(sources, split = ":"))[2]
+    #   org_db <- "org.Hs.eg.db"
+    #   sim_matrix <- rrvgo::calculateSimMatrix(top_terms$term_id,
+    #                                           orgdb = org_db,
+    #                                           semdata = GOSemSim::godata(annoDb = org_db, ont = ont, keytype = "ENTREZID"),
+    #                                           ont = ont,
+    #                                           method = "Rel")
+    #
+    #   # Assign scores based on p-values
+    #   scores <- stats::setNames(-log10(top_terms$p_value), top_terms$term_id)
+    #
+    #   # Reduce the similarity matrix
+    #   reduced_terms <- rrvgo::reduceSimMatrix(sim_matrix,
+    #                                           scores,
+    #                                           threshold = 0.7,
+    #                                           orgdb = org_db)
+    #
+    # }
+
+
     for(i in 1:nrow(top_terms)){
       term <- top_terms[i, "term_name"]
+      term <- substr(term, 1, 40)
       enr_int <- unlist(strsplit(top_terms[i, "intersection"], ","))
       intersection <- as.numeric(rownames(tom_subset) %in% enr_int)
       term <- paste(term, " (", length(enr_int),"/", length(genes_to_enrich),")", sep = "")
@@ -230,10 +255,28 @@ lncRNAEnrich <- function(lncName,
       no_term <- rbind(no_term, intersection)
     }
 
-    # Set layout for the network
-    layout_coords <- graphlayouts::layout_with_stress(graph_net)
+    # # Set layout for the network
+    # layout_coords <- graphlayouts::layout_with_stress(graph_net)
+    # igraph::V(graph_net)$x <- layout_coords[, 1]
+    # igraph::V(graph_net)$y <- layout_coords[, 2]
+
+    # Identify index of the node of interest
+    center_name <- lnc_id
+    center_index <- which(igraph::V(graph_net)$name == center_name)
+
+    # Reorder the graph so the center node is first
+    graph_net <- igraph::permute(graph_net, c(center_index, setdiff(seq_len(igraph::vcount(graph_net)), center_index)))
+
+    # Create layout: center node at origin, others in a circle
+    theta <- seq(0, 2 * pi, length.out = igraph::vcount(graph_net))
+    layout_coords <- matrix(0, nrow = igraph::vcount(graph_net), ncol = 2)
+    layout_coords[1, ] <- c(0, 0)  # center node at (0, 0)
+    layout_coords[-1, ] <- cbind(cos(theta[-1]), sin(theta[-1]))
+
+    # Assign coordinates to vertex attributes
     igraph::V(graph_net)$x <- layout_coords[, 1]
     igraph::V(graph_net)$y <- layout_coords[, 2]
+
 
     # Change the nodes names to gene name from geneID
     igraph::V(graph_net)$label <- lacenObject$annotationData$gene_name[match(igraph::V(graph_net)$name,
@@ -254,7 +297,9 @@ lncRNAEnrich <- function(lncName,
     # Assign 0 to the non enriched nodes
     is_enriched_node <- colSums(no_term)
     is_enriched_node <- ifelse(is_enriched_node == 0, 1, 0)
-    is_enriched_node[which((lncName == igraph::V(graph_net)$label))] <- 0
+    # is_enriched_node[which((lncName == igraph::V(graph_net)$label))] <- 0
+    is_nc <- connectivity_df$gene_name[connectivity_df$is_nc]
+    is_enriched_node[igraph::V(graph_net)$label %in% is_nc] <- 0
     graph_net <- igraph::set_vertex_attr(graph_net, "no enriched term", index = igraph::V(graph_net), is_enriched_node)
     enrichment_categories <- c("no enriched term", enrichment_categories)
 
@@ -268,60 +313,78 @@ lncRNAEnrich <- function(lncName,
     subgraph_nc <- subgraph_nc[subgraph_nc$is_nc == 1, ]
 
     # Create and filter the color palette
-    path_pal <- c('#38871C',
-                  '#3D7CAC',
-                  '#AF4BB4',
-                  '#A1683B',
-                  '#EE002E',
-                  '#2A26FB',
-                  '#D20D7F',
-                  '#3B4738',
-                  '#C74D00',
-                  '#BE16F6',
-                  '#620038',
-                  '#0016AD',
-                  '#886A90',
-                  '#D80DB2',
-                  '#9F3242',
-                  '#7A7A2E',
-                  '#1C1C62',
-                  '#0D866C',
-                  '#C60045',
-                  '#B44288',
-                  '#9856D7',
-                  '#2675DE',
-                  '#7960AD',
-                  '#C90DD1',
-                  '#94686A',
-                  '#22606E',
-                  '#661669',
-                  '#5A2A00',
-                  '#8422E7',
-                  '#472E45',
-                  '#AD5870',
-                  '#3B6322',
-                  '#B65C38',
-                  '#CF2A0D',
-                  '#A35697',
-                  '#510080')
+    path_pal <- c("#424080",
+                  "#DB3B0D",
+                  "#22FD00",
+                  "#F6DC9A",
+                  "#FE0DD0",
+                  "#00FCE8",
+                  "#AE0DFF",
+                  "#A44563",
+                  "#006216",
+                  "#E4DDF4",
+                  "#2690FF",
+                  "#F099FE",
+                  "#C8F01C",
+                  "#FD9F2A",
+                  "#F41688",
+                  "#7fd1ee",
+                  "#6EEC90",
+                  "#635C5A",
+                  "#8E5600",
+                  "#4d915b")
     path_pal <- path_pal[seq(1,(length(enrichment_categories)-1))]
 
-    # Generate network plot using ggraph
+    # Setting the edge colors of lnc to black
+    # edge_list <- igraph::get.edgelist(graph_net)
+    edge_list <- igraph::as_edgelist(graph_net)
+    edge_color <- ifelse(edge_list[,1] == lnc_id | edge_list[,2] == lnc_id,
+                         "grey75", "grey30")
+    igraph::E(graph_net)$edge_color <- edge_color
 
+    # Set the edge alpha based on the nodes number
+    nGenesToScale <- nGenesNet
+
+    if(nGenesToScale < 20){nGenesToScale <- 20}
+
+    alpha <- 40 * 0.35 / nGenesToScale
+    scale_range <- c(0.5, 2.5) * 30 / nGenesToScale
+
+    # Setting the edge alpha of lnc to 0.15
+    edge_alpha <- ifelse(edge_list[,1] == lnc_id | edge_list[,2] == lnc_id,
+                         0.5, alpha)
+    igraph::E(graph_net)$edge_alpha <- edge_alpha
+
+    # Setting the edge weights to less connected genes to 0
+    edge_weight <- igraph::E(graph_net)$weight
+    sel <- (edge_weight < quantile(edge_weight, 0.9)) & (edge_list[,1] != lnc_id) & (edge_list[,2] != lnc_id)
+    edge_weight[sel] <- NA
+    igraph::E(graph_net)$weight <- edge_weight
+
+    # Setting the node size
+    scalaling_factor <- 32/nGenesToScale
+
+    node_size <- 24 * scalaling_factor
+
+    lnc_node_scale <- 2 * scalaling_factor
+
+    text_size <- 5 * scalaling_factor
+
+    # Generate network plot using ggraph
     suppressWarnings({
       network_plot <- ggraph::ggraph(graph_net,
                                      "manual",
                                      x = igraph::V(graph_net)$x,
                                      y = igraph::V(graph_net)$y) +
-        ggraph::geom_edge_link0(alpha = .25,
-                                ggplot2::aes(width = weight),
-                                show.legend = F) +
-        ggraph::scale_edge_width(range = c(0.5, 2.5))+
+        ggraph::geom_edge_link0(ggplot2::aes(width = weight, color = edge_color),
+                                alpha = edge_alpha,
+                                show.legend = FALSE) +
+        ggraph::scale_edge_width(range = scale_range)+
         scatterpie::geom_scatterpie(
           cols = enrichment_categories,
           data = igraph::as_data_frame(graph_net, "vertices"),
           colour = NA,
-          pie_scale = 2,
+          pie_scale = lnc_node_scale,
           legend_name = "GO"
         ) +
         ggplot2::scale_fill_manual(values = c("#808080",
@@ -329,7 +392,7 @@ lncRNAEnrich <- function(lncName,
         ggraph::geom_node_point(data = subgraph_nc,
                                 ggplot2::aes(x = x, y = y),
                                 shape = 23,
-                                size = 30,
+                                size = node_size,
                                 show.legend = FALSE,
                                 fill = "#808080",
                                 colour = "#808080") +
@@ -338,13 +401,15 @@ lncRNAEnrich <- function(lncName,
                                repel = FALSE,
                                colour = igraph::V(graph_net)$lcolor,
                                fontface = "bold",
-                               size = 5
+                               size = text_size
         ) +
         ggraph::theme_graph(base_family="sans")+
-        ggplot2::theme(legend.position = "right", text = ggplot2::element_text(size = 24))
+        ggplot2::theme(legend.position = "right", text = ggplot2::element_text(size = 16)) +
+        ggplot2::guides(fill = ggplot2::guide_legend(ncol = 1))
+
     })
 
-    # Save network plot
+    #Save network plot
     net_path <- ifelse(is.null(list(...)[["netPath"]]),
                        paste0("./", lncName, "_net.png"),
                        list(...)[["netPath"]])
