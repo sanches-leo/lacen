@@ -94,14 +94,14 @@ stackedBarplot.lacen <- function(lacenObject,
   module_colors <- c("grey", WGCNA::labels2colors(sort(unique_modules)))
 
   # Create the stacked barplot using ggplot2
-  ggplot_obj <- ggplot2::ggplot(barplot_data, ggplot2::aes(x = "Module")) +
-    ggplot2::geom_bar(aes(y = "nGenes", fill = "geneType"), stat = "identity") +
+  ggplot_obj <- ggplot2::ggplot(barplot_data, ggplot2::aes(x = Module)) +
+    ggplot2::geom_bar(ggplot2::aes(y = nGenes, fill = geneType), stat = "identity") +
     ggplot2::scale_fill_manual(values = c("lnc" = "grey", "pc" = "blue")) +
     ggplot2::xlab("") +
     ggplot2::ylab("Number of Protein-coding (blue) and Non-coding Genes (grey)") +
     ggplot2::guides(fill = ggplot2::guide_legend(title = "Gene Type")) +
-    ggplot2::geom_point(aes(y = "correlationPos"), shape = 19, size = 3) +
-    ggplot2::geom_point(aes(y = "correlationNeg"), shape = 1, size = 3) +
+    ggplot2::geom_point(ggplot2::aes(y = correlationPos), shape = 19, size = 3) +
+    ggplot2::geom_point(ggplot2::aes(y = correlationNeg), shape = 1, size = 3) +
     ggplot2::scale_y_continuous(
       sec.axis = ggplot2::sec_axis(~ . / max(barplot_data$nGenes), name = "Trait-Module Correlation")
     ) +

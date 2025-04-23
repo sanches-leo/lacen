@@ -1,6 +1,6 @@
 Package: lacen
 Title: lncRNA Annotation Co-Expression Network tool
-Version: 0.1.001
+Version: 0.1.002
 Authors@R: 
     person("Leonardo", "Sanches", 
            email = "leonardo2.sanches@usp.br", 
@@ -19,7 +19,7 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 LazyData: true
 Depends: 
-    R (>= 4.0.0)
+    R (>= 4.4.0)
 Imports:
     WGCNA,
     ggplot2,
