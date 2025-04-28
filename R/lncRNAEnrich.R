@@ -313,9 +313,7 @@ lncRNAEnrich <- function(lncName,
     subgraph_nc <- subgraph_nc[subgraph_nc$is_nc == 1, ]
 
     # Create and filter the color palette
-    path_pal <- c("#424080",
-                  "#DB3B0D",
-                  "#22FD00",
+    path_pal <- c("#22FD00",
                   "#F6DC9A",
                   "#FE0DD0",
                   "#00FCE8",
@@ -324,6 +322,7 @@ lncRNAEnrich <- function(lncName,
                   "#006216",
                   "#E4DDF4",
                   "#2690FF",
+                  "#424080",
                   "#F099FE",
                   "#C8F01C",
                   "#FD9F2A",
@@ -332,7 +331,8 @@ lncRNAEnrich <- function(lncName,
                   "#6EEC90",
                   "#635C5A",
                   "#8E5600",
-                  "#4d915b")
+                  "#4d915b",
+                  "#DB3B0D")
     path_pal <- path_pal[seq(1,(length(enrichment_categories)-1))]
 
     # Setting the edge colors of lnc to black
@@ -376,8 +376,9 @@ lncRNAEnrich <- function(lncName,
                                      "manual",
                                      x = igraph::V(graph_net)$x,
                                      y = igraph::V(graph_net)$y) +
-        ggraph::geom_edge_link0(ggplot2::aes(width = weight, color = edge_color),
-                                alpha = edge_alpha,
+        ggraph::geom_edge_link0(ggplot2::aes(width = weight),
+                                color = igraph::E(graph_net)$edge_color,
+                                alpha = igraph::E(graph_net)$edge_alpha,
                                 show.legend = FALSE) +
         ggraph::scale_edge_width(range = scale_range)+
         scatterpie::geom_scatterpie(
