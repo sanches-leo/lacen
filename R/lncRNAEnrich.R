@@ -411,6 +411,7 @@ lncRNAEnrich <- function(lncName,
     })
 
     #Save network plot
+    lncNameClean <- gsub("[^A-Za-z0-9]", "", lncName)
     net_path <- ifelse(is.null(list(...)[["netPath"]]),
                        paste0("./", lncName, "_net.png"),
                        list(...)[["netPath"]])

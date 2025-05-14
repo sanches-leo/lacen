@@ -234,16 +234,16 @@ Using a given lncRNA identifier and a LACEN object containing the coexpression n
 - Generates a network plot showing the strongest coexpression relationships.
 - Visualizes the enrichment results, helping to infer potential functions of the lncRNA.
 
-To analyze the lncRNA "LINC01614", run:
+To analyze the lncRNA "LINC01055", run:
 
 ```r
-lncRNAEnrich(lncName = "LINC01614",
+lncRNAEnrich(lncName = "LINC01055",
              lacenObject = lacenObject)
 ```
 
-![Figure 9: LINC01614 network](figures/LINC01614_net.png)
+![Figure 9: LINC01055 network](figures/LINC01055_net.png)
 
-![Figure 10: LINC01614 enrichment](figures/LINC01614_enr.png)
+![Figure 10: LINC01055 enrichment](figures/LINC01055_enr.png)
 
 
 ## R Package Dependencies
