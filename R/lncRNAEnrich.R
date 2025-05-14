@@ -413,7 +413,7 @@ lncRNAEnrich <- function(lncName,
     #Save network plot
     lncNameClean <- gsub("[^A-Za-z0-9]", "", lncName)
     net_path <- ifelse(is.null(list(...)[["netPath"]]),
-                       paste0("./", lncName, "_net.png"),
+                       paste0("./", lncNameClean, "_net.png"),
                        list(...)[["netPath"]])
     grDevices::png(filename = net_path, width = 1800, height = 1200, res = 100)
     print(network_plot)
