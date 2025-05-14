@@ -1,6 +1,6 @@
 Package: lacen
 Title: lncRNA Annotation Co-Expression Network tool
-Version: 0.1.004
+Version: 0.1.005
 Authors@R: 
     person("Leonardo", "Sanches", 
            email = "leonardo2.sanches@usp.br", 

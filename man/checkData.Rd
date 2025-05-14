@@ -4,10 +4,12 @@
 \alias{checkData}
 \title{Check Data}
 \usage{
-checkData(lacenObject)
+checkData(lacenObject, orgdb = "org.Hs.eg.db")
 }
 \arguments{
 \item{lacenObject}{An object of class "lacen" created by \code{\link[=initLacen]{initLacen()}}.}
+
+\item{orgdb}{A Bioconductor \code{OrgDb} object corresponding to the organism of interest (e.g., \code{org.Hs.eg.db} for human).}
 }
 \value{
 Prints a confirmation message if data format is correct; otherwise, issues warnings.
