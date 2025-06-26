@@ -80,12 +80,12 @@ lacenBootstrap.lacen <- function(lacenObject,
                             indicePower,
                             maxBlockSize,
                             parallel,
-                            nparallel){
+                            num_parallel){
 
     # If parallel processing is enabled, use foreach for iterations
     if(isTRUE(parallel)){
       # Register parallel backend with the specified number of workers
-      doParallel::registerDoParallel(nparallel)
+      doParallel::registerDoParallel(num_parallel)
 
       # Initialize a data frame to store bootstrap results:
       # rows represent each bootstrap iteration, columns correspond to genes.
@@ -338,7 +338,7 @@ lacenBootstrap.lacen <- function(lacenObject,
                              indicePower = soft_power,
                              maxBlockSize = maxBlockSize,
                              parallel = parallel,
-                             nparallel = nparallel)
+                             num_parallel = num_parallel)
 
   # Compute the module stability groups and generate a boxplot saved to pathModGroupsPlot.
   modGroups <- moduleStability(bootstrap = bootstrap,
