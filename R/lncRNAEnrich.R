@@ -71,14 +71,17 @@ lncRNAEnrich <- function(lncName,
     stop("'lncHighlight' must be a single logical value (TRUE/FALSE).")
   }
 
+  # Clean lnc string to saving file
+  lncNameClean <- gsub("[^A-Za-z0-9]", "", lncName)
+
   # Extract gene ID for the specified lncRNA
   subDF <- lacenObject$summdf[lacenObject$summdf$gene_name == lncName, ]
 
   lnc_id <- subDF$gene_id[subDF$is_nc]
 
-  lnc_module <- subDF$module > 0
+  # lnc_module <- subDF$module > 0
 
-  lnc_id <- lnc_id[lnc_module]
+  # lnc_id <- lnc_id[lnc_module]
 
   if(length(lnc_id) > 1){
     warning(paste("More than 1 ID is identified for this lncRNA. Using ", lnc_id[1]))
@@ -153,7 +156,7 @@ lncRNAEnrich <- function(lncName,
 
   # Save the enrichment plot
   enr_path <- ifelse(is.null(list(...)[["enrPath"]]),
-                     paste0("./", lncName, "_enr.png"),
+                     paste0("./", lncNameClean, "_enr.png"),
                      list(...)[["enrPath"]])
 
   grDevices::png(filename = enr_path, width = 1200, height = 1000)
@@ -183,19 +186,23 @@ lncRNAEnrich <- function(lncName,
   )
 
   # Save connectivity data as CSV
-  connec_path <- ifelse(is.null(list(...)[["connecPath"]]), "./connectivities.csv", list(...)[["connecPath"]])
+  connec_path <- ifelse(is.null(list(...)[["connecPath"]]),
+                        paste0("./", lncNameClean, "_connectivities.csv"),
+                        list(...)[["connecPath"]])
   utils::write.csv(connectivity_df, file = connec_path, row.names = FALSE)
 
   # Save enrichment results as CSV
-  enr_csv_path <- ifelse(is.null(list(...)[["enrCsvPath"]]), "./enrichment.csv", list(...)[["enrCsvPath"]])
+  enr_csv_path <- ifelse(is.null(list(...)[["enrCsvPath"]]), 
+                         paste0("./", lncNameClean, "_enrichment.csv"),
+                         list(...)[["enrCsvPath"]])
   enr_df <- as.data.frame(apply(enrichment$result,2,as.character))
 
   utils::write.csv(enr_df, file = enr_csv_path, row.names = FALSE)
 
   # Prepare the TOM for network visualization
   tom_matrix <- lacenObject$TOM
-  tom_subset <- tom_matrix[rownames(tom_matrix) %in% genes_to_enrich[1:nGenes],
-                           colnames(tom_matrix) %in% genes_to_enrich[1:nGenes]]
+  tom_subset <- tom_matrix[rownames(tom_matrix) %in% genes_to_enrich[1:nGenesNet],
+                           colnames(tom_matrix) %in% genes_to_enrich[1:nGenesNet]]
   tom_subset[tom_subset < stats::median(tom_matrix, na.rm = TRUE)] <- 0
   diag(tom_subset) <- 0  # Remove self-connections
 
@@ -265,7 +272,11 @@ lncRNAEnrich <- function(lncName,
     center_index <- which(igraph::V(graph_net)$name == center_name)
 
     # Reorder the graph so the center node is first
-    graph_net <- igraph::permute(graph_net, c(center_index, setdiff(seq_len(igraph::vcount(graph_net)), center_index)))
+    all_indices <- seq_len(igraph::vcount(graph_net))
+    desired_order <- c(center_index, setdiff(all_indices, center_index))
+    per <- match(all_indices, desired_order)
+    graph_net <- igraph::permute(graph_net, permutation = per)
+    no_term <- no_term[, desired_order]
 
     # Create layout: center node at origin, others in a circle
     theta <- seq(0, 2 * pi, length.out = igraph::vcount(graph_net))
@@ -420,4 +431,3 @@ lncRNAEnrich <- function(lncName,
     invisible(grDevices::dev.off())
   }
 }
-

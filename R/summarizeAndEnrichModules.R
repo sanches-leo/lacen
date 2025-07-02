@@ -537,8 +537,8 @@ summarizeAndEnrichModules.lacen <- function(lacenObject,
     rownames(tom_matrix) <- colnames(expr_data)
     colnames(tom_matrix) <- colnames(expr_data)
     # Exclude genes not assigned to any module
-    tom_filtered <- tom_matrix[!summary_df$module == 0, !summary_df$module == 0]
-    return(tom_filtered)
+    # tom_filtered <- tom_matrix[!summary_df$module == 0, !summary_df$module == 0]
+    return(tom_matrix)
   }
 
   if (isTRUE(log)) {
