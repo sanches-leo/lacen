@@ -754,13 +754,15 @@ heatmapTopConnectivity.lacen <- function(
   
   # If outTSV is specified, generate an output table with DEG data and enrichment terms.
   if (!isFALSE(outTSV)) {
-    out <- summdf[summdf$gene_id %in% c(lnc_DEG, pc_DEG), ]
-    out <- out[order(out$is_nc, out$kWithin, decreasing = TRUE), ]
-    if (isTRUE(removeNonDEG)) {
-      out <- out[!is.na(out$pval), ]
+    if(module %in% names(rrvgolist)){
+      out <- summdf[summdf$gene_id %in% c(lnc_DEG, pc_DEG), ]
+      out <- out[order(out$is_nc, out$kWithin, decreasing = TRUE), ]
+      if (isTRUE(removeNonDEG)) {
+        out <- out[!is.na(out$pval), ]
+      }
+      out <- termsToOut(out, rrvgolist, module)
+      tsvname <- outTSV
+      utils::write.table(out, file = tsvname, sep = "\t")
     }
-    out <- termsToOut(out, rrvgolist, module)
-    tsvname <- outTSV
-    utils::write.table(out, file = tsvname, sep = "\t")
   }
 }
