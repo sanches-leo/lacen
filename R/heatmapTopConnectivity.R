@@ -110,7 +110,7 @@ heatmapTopConnectivity.lacen <- function(
   }
   
   # Validate outTSV: must be logical or a character string (file path)
-  if (invalidPar(outTSV, "logical") & !is.character(outTSV)) {
+  if (!isFALSE(outTSV) & !is.character(outTSV)) {
     stop("outTSV should be a logical value or a path and filename")
   }
   
@@ -761,6 +761,12 @@ heatmapTopConnectivity.lacen <- function(
         out <- out[!is.na(out$pval), ]
       }
       out <- termsToOut(out, rrvgolist, module)
+      tsvname <- outTSV
+      utils::write.table(out, file = tsvname, sep = "\t")
+    } else {
+      out <- summdf[summdf$gene_id %in% c(lnc_DEG, pc_DEG), ]
+      out <- out[order(out$is_nc, out$kWithin, decreasing = TRUE), ]
+      out <- out[, c(1:9)]
       tsvname <- outTSV
       utils::write.table(out, file = tsvname, sep = "\t")
     }
