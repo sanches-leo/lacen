@@ -19,6 +19,7 @@ summarizeAndEnrichModules(
   orgdb = "org.Hs.eg.db",
   reducedTermsThreshold = 0.7,
   filename = "5_enrichedgraph.png",
+  pathTSV = FALSE,
   ...
 )
 }
@@ -50,6 +51,8 @@ summarizeAndEnrichModules(
 \item{reducedTermsThreshold}{Similarity threshold for reducing enrichment terms.}
 
 \item{filename}{Filename to save the enrichment graph as PNG.}
+
+\item{pathTSV}{Path to save the tsv raw result of the analysis.}
 
 \item{...}{Additional parameters for internal functions.}
 }
