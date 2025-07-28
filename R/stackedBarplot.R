@@ -115,7 +115,7 @@ stackedBarplot.lacen <- function(lacenObject,
     )
 
   # Save the plot as PNG
-  grDevices::png(filename = filename, width = 1000, height = 600)
+  grDevices::png(filename = filename, width = 1200, height = 800)
   print(ggplot_obj)
   grDevices::dev.off()
 

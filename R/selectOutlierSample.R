@@ -12,23 +12,34 @@
 #' @export
 #' @import WGCNA
 selectOutlierSample <- function(lacenObject,
-                                plot = TRUE,
-                                filename = "clusterTree.png",
-                                height = FALSE) {
+                                 plot = TRUE,
+                                 filename = "clusterTree.png",
+                                 height = FALSE) {
   UseMethod("selectOutlierSample")
 }
 
 #' @export
 selectOutlierSample.lacen <- function(lacenObject,
-                                      plot = TRUE,
-                                      filename = "clusterTree.png",
-                                      height = FALSE) {
+                                       plot = TRUE,
+                                       filename = "clusterTree.png",
+                                       height = FALSE) {
   # Extract expression data and traits
   expr_data <- lacenObject$datExpr
   traits <- lacenObject$datTraits$Trait
   
+  # Set png width
+  n_samples <- length(traits)
+  
+  if(n_samples <= 30){
+    png_width <- 800
+  } else if (n_samples <= 60){
+    png_width <- 1200
+  } else {
+    png_width <- 1600
+  }
+  
   # Open PNG device if a filename is provided
-  grDevices::png(filename = filename)
+  grDevices::png(filename = filename, width = png_width, height = png_height)
   
   # Plot cluster tree without a height threshold
   if (isFALSE(height)) {
@@ -42,7 +53,9 @@ selectOutlierSample.lacen <- function(lacenObject,
   grDevices::dev.off()
   
   # If height is provided, classify samples based on the height cutoff
-  if (!isFALSE(height)) {
+  if (isFALSE(height)) {
+    WGCNA::plotClusterTreeSamples(datExpr = expr_data, y = traits)
+  } else {
     # Perform hierarchical clustering
     sample_tree <- fastcluster::hclust(stats::dist(expr_data), method = "average")
     # Cut the tree at the specified height
