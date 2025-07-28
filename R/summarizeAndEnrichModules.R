@@ -16,6 +16,7 @@
 #' @param orgdb Bioconductor OrgDb package (e.g., "org.Hs.eg.db").
 #' @param reducedTermsThreshold Similarity threshold for reducing enrichment terms.
 #' @param filename Filename to save the enrichment graph as PNG.
+#' @param pathTSV Path to save the tsv raw result of the analysis.
 #' @param ... Additional parameters for internal functions.
 #'
 #' @return A 'lacen' S3 object with updated `summdf`, `rrvgolist`, and `TOM`.
@@ -35,6 +36,7 @@ summarizeAndEnrichModules <- function(lacenObject,
                                       orgdb = "org.Hs.eg.db",
                                       reducedTermsThreshold = 0.7,
                                       filename = "5_enrichedgraph.png",
+                                      pathTSV = FALSE,
                                       ...) {
   UseMethod("summarizeAndEnrichModules")
 }
@@ -54,6 +56,7 @@ summarizeAndEnrichModules.lacen <- function(lacenObject,
                                             orgdb = "org.Hs.eg.db",
                                             reducedTermsThreshold = 0.7,
                                             filename = "5_enrichedgraph.png",
+                                            pathTSV = FALSE,
                                             ...) {
   # Extract necessary data from lacenObject
   annotation_data <- lacenObject$annotationData
@@ -649,5 +652,9 @@ summarizeAndEnrichModules.lacen <- function(lacenObject,
 
   if (isTRUE(log)) {
     cat("Done!\n", file = log_path, append = TRUE)
+  }
+
+  if(!isFALSE(pathTSV)){
+    write.table(summary_df, pathTSV, sep = "\t", row.names = FALSE, quote = FALSE)
   }
 }
