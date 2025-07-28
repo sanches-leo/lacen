@@ -26,10 +26,10 @@ selectOutlierSample.lacen <- function(lacenObject,
   # Extract expression data and traits
   expr_data <- lacenObject$datExpr
   traits <- lacenObject$datTraits$Trait
-  
+
   # Set png width
   n_samples <- length(traits)
-  
+
   if(n_samples <= 30){
     png_width <- 800
   } else if (n_samples <= 60){
@@ -37,10 +37,10 @@ selectOutlierSample.lacen <- function(lacenObject,
   } else {
     png_width <- 1600
   }
-  
+
   # Open PNG device if a filename is provided
-  grDevices::png(filename = filename, width = png_width, height = png_height)
-  
+  grDevices::png(filename = filename, width = png_width, height = 800)
+
   # Plot cluster tree without a height threshold
   if (isFALSE(height)) {
     WGCNA::plotClusterTreeSamples(datExpr = expr_data, y = traits)
@@ -48,10 +48,10 @@ selectOutlierSample.lacen <- function(lacenObject,
     # Plot cluster tree with a height threshold to identify outliers
     WGCNA::plotClusterTreeSamples(datExpr = expr_data, y = traits, abHeight = height)
   }
-  
+
   # Close the PNG device
   grDevices::dev.off()
-  
+
   # If height is provided, classify samples based on the height cutoff
   if (isFALSE(height)) {
     WGCNA::plotClusterTreeSamples(datExpr = expr_data, y = traits)
@@ -69,7 +69,7 @@ selectOutlierSample.lacen <- function(lacenObject,
     # Filter expression data and traits based on kept samples
     lacenObject$datExpr <- expr_data[keep_samples, ]
     lacenObject$datTraits <- lacenObject$datTraits[lacenObject$datTraits$Sample %in% rownames(lacenObject$datExpr), ]
-    
+
     # Re-plot the cluster tree with highlighted outliers if requested
     if (isTRUE(plot)) {
       WGCNA::plotClusterTreeSamples(datExpr = lacenObject$datExpr, y = lacenObject$datTraits$Trait, abHeight = height)
