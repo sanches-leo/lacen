@@ -645,9 +645,8 @@ summarizeAndEnrichModules.lacen <- function(lacenObject,
     lacenObject$rrvgolist <- reduced_enrichment
     lacenObject$TOM <- tom_matrix
 
-    return(lacenObject)
   } else {
-    stop("No module could be enriched. Consider increasing the number of transcripts or lowering filter parameters.")
+    warning("No module could be enriched. Consider increasing the number of genes or lowering filter parameters.")
   }
 
   if (isTRUE(log)) {
@@ -657,4 +656,6 @@ summarizeAndEnrichModules.lacen <- function(lacenObject,
   if(!isFALSE(pathTSV)){
     write.table(summary_df, pathTSV, sep = "\t", row.names = FALSE, quote = FALSE)
   }
+
+  return(lacenObject)
 }
