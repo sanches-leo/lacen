@@ -155,7 +155,7 @@ summarizeAndEnrichModules.lacen <- function(lacenObject,
 
     # Apply bootstrap stability cutoff
     if(!isFALSE(bootstrap_stability)){
-      stability_filter <- as.vector(bootstrap_stability > cut_bootstrap/100)
+      stability_filter <- as.vector(bootstrap_stability > cut_bootstrap)
     } else{
       stability_filter <- TRUE
     }

@@ -10,7 +10,6 @@
 #' @param organism Organism name for functional annotations.
 #' @param nGenesNet Number of genes to visualize in the network plot.
 #' @param nTerm Number of top enriched terms to display in the enrichment graph.
-#' @param lncHighlight Logical. If TRUE, highlights all lncRNAs in the network visualization.
 #' @param ... Additional parameters for internal functions.
 #'
 #' @return None (plots and saves enrichment results and network).
@@ -24,7 +23,6 @@ lncRNAEnrich <- function(lncName,
                           organism = "hsapiens",
                           nGenesNet = 10,
                           nTerm = 3,
-                          lncHighlight = FALSE,
                           ...) {
   # Validate input parameters
   if (!is.character(lncName) || length(lncName) != 1) {
@@ -67,9 +65,9 @@ lncRNAEnrich <- function(lncName,
     stop("'nTerm' must be a single numeric value.")
   }
 
-  if (!is.logical(lncHighlight) || length(lncHighlight) != 1) {
-    stop("'lncHighlight' must be a single logical value (TRUE/FALSE).")
-  }
+  # if (!is.logical(lncHighlight) || length(lncHighlight) != 1) {
+  #   stop("'lncHighlight' must be a single logical value (TRUE/FALSE).")
+  # }
 
   # Clean lnc string to saving file
   lncNameClean <- gsub("[^A-Za-z0-9]", "", lncName)
@@ -192,7 +190,7 @@ lncRNAEnrich <- function(lncName,
   utils::write.csv(connectivity_df, file = connec_path, row.names = FALSE)
 
   # Save enrichment results as CSV
-  enr_csv_path <- ifelse(is.null(list(...)[["enrCsvPath"]]), 
+  enr_csv_path <- ifelse(is.null(list(...)[["enrCsvPath"]]),
                          paste0("./", lncNameClean, "_enrichment.csv"),
                          list(...)[["enrCsvPath"]])
   enr_df <- as.data.frame(apply(enrichment$result,2,as.character))
@@ -295,9 +293,9 @@ lncRNAEnrich <- function(lncName,
 
     # Set the nodes words colors
     igraph::V(graph_net)$lcolor <- "black"
-    if(isTRUE(lncHighlight)){
-      igraph::V(graph_net)$lcolor[igraph::V(graph_net)$label %in% lacenObject$ncAnnotation$gene_id] <- "red"
-    }
+    # if(isTRUE(lncHighlight)){
+    #   igraph::V(graph_net)$lcolor[igraph::V(graph_net)$label %in% lacenObject$ncAnnotation$gene_id] <- "red"
+    # }
     # igraph::V(graph_net)$lcolor[igraph::V(graph_net)$label == lncName] <- "red4"
 
     # Assign lncRNA query to network (red)

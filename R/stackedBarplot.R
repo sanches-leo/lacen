@@ -30,8 +30,10 @@ stackedBarplot.lacen <- function(lacenObject,
   # Filter expression data for selected genes
   expr_selected <- expr_data[, colnames(expr_data) %in% genes_selected]
 
+  summary_df_selected <- summary_df[summary_df$cutBootstrap, ]
+
   # Extract non-coding annotations
-  nc_data <- summary_df$is_nc
+  nc_data <- summary_df_selected$is_nc
 
   # Initialize data for stacked barplot
   barplot_data <- data.frame(Module = character(),
@@ -41,15 +43,15 @@ stackedBarplot.lacen <- function(lacenObject,
                              stringsAsFactors = FALSE)
 
   # Iterate over each module to compile data
-  unique_modules <- sort(unique(summary_df$module))
+  unique_modules <- sort(unique(summary_df_selected$module))
   for (mod in unique_modules) {
     if (mod != 0) {
       # Subset genes in the current module
-      genes_in_mod <- summary_df$module == mod
-      module_genes <- summary_df$gene_id[genes_in_mod]
+      genes_in_mod <- summary_df_selected$module == mod
+      module_genes <- summary_df_selected$gene_id[genes_in_mod]
 
       # Count non-coding and protein-coding genes
-      n_lnc <- sum(module_genes %in% summary_df$gene_id[summary_df$is_nc])
+      n_lnc <- sum(module_genes %in% summary_df_selected$gene_id[summary_df_selected$is_nc])
       n_pc <- length(module_genes) - n_lnc
 
       # Calculate module eigengenes and correlation with traits
