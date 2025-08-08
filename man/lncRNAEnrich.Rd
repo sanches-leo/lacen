@@ -13,7 +13,6 @@ lncRNAEnrich(
   organism = "hsapiens",
   nGenesNet = 10,
   nTerm = 3,
-  lncHighlight = FALSE,
   ...
 )
 }
@@ -33,8 +32,6 @@ lncRNAEnrich(
 \item{nGenesNet}{Number of genes to visualize in the network plot.}
 
 \item{nTerm}{Number of top enriched terms to display in the enrichment graph.}
-
-\item{lncHighlight}{Logical. If TRUE, highlights all lncRNAs in the network visualization.}
 
 \item{...}{Additional parameters for internal functions.}
 }
