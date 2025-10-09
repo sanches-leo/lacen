@@ -9,7 +9,8 @@ filterTransform(
   pThreshold = 0.01,
   fcThreshold = 1,
   topVarGenes = 5000,
-  filterMethod = "DEG"
+  filterMethod = "DEG",
+  ...
 )
 }
 \arguments{

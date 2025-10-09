@@ -11,7 +11,7 @@
 #'
 #' @param datCounts Data counts dataframe with genes as rows and samples as columns.
 #' The gene/transcript IDs should be in the row names and sample names/IDs in the column names.
-#' @param datExpression Differential expression dataframe. Can be from Limma output or a dataframe with columns "ID", "log2FC", and "pvalue".
+#' @param datExpression Differential expression dataframe. Can be from Limma output or a dataframe with columns "gene_id", "log2FC", and "pval".
 #' @param datTraits Conditions/Traits data. A two-column dataframe with sample IDs in "Sample" and condition codes in "Trait".
 #' @param annotationData Annotation dataframe with "gene_id" and "gene_name" columns.
 #' @param ncAnnotation Subset of "annotationData" containing only long non-coding RNAs.
