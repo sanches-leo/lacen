@@ -25,15 +25,9 @@ filterTransform.lacen <- function(lacenObject,
                                    fcThreshold = 1,
                                    topVarGenes = 5000,
                                    filterMethod = "DEG",
+                                   lnc_keep = c(),
                                    ...) {
-  if(exists("lnc_keep")){
-    if(!(is.vector(lnc_keep) & is.character(lnc_keep))){
-      warning("lnc_keep should be a character vector. Removing lnc_keep.")
-      lnc_keep <- c()
-    }
-  } else {
-    lnc_keep <- c()
-  }
+  
   
   
   # Extract necessary data from lacenObject

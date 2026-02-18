@@ -122,14 +122,15 @@ lacenBootstrap.lacen <- function(lacenObject,
         # Reconstruct a full vector for all genes:
         # - For genes included in the current bootstrap, assign the computed module color.
         # - For genes left out, assign NA.
-        for(j in 1:dim(datExpr)[[2]]){
-          if(this_gene_wont_be_in_iteratiom_number[j] != i){
-            next_line = c(next_line, net$colors[counter])
-            counter = counter + 1
-          }
-          else{
-            next_line = c(next_line, NA)
-          }
+        # Pre-allocate next_line with NAs
+        next_line <- rep(NA, dim(datExpr)[[2]])
+        
+        # Identify indices of genes present in this iteration
+        present_indices <- which(this_gene_wont_be_in_iteratiom_number != i)
+        
+        # Assign module colors to present genes
+        if(length(present_indices) > 0) {
+          next_line[present_indices] <- net$colors
         }
         # Return the reconstructed module assignment vector for iteration i
         return(next_line)
@@ -171,14 +172,15 @@ lacenBootstrap.lacen <- function(lacenObject,
         next_line = c()
         counter = 1
         # Reconstruct the complete vector of module assignments for all genes
-        for(j in 1:dim(datExpr)[[2]]){
-          if(this_gene_wont_be_in_iteratiom_number[j] != i){
-            next_line = c(next_line, net$colors[counter])
-            counter = counter + 1
-          }
-          else{
-            next_line = c(next_line, NA)
-          }
+        # Pre-allocate next_line with NAs
+        next_line <- rep(NA, dim(datExpr)[[2]])
+        
+        # Identify indices of genes present in this iteration
+        present_indices <- which(this_gene_wont_be_in_iteratiom_number != i)
+        
+        # Assign module colors to present genes
+        if(length(present_indices) > 0) {
+          next_line[present_indices] <- net$colors
         }
         # Save the iteration result (note: row 1 is already used by the full dataset)
         bootstrap[i+1,] <- next_line
@@ -322,7 +324,7 @@ lacenBootstrap.lacen <- function(lacenObject,
          cex.sub = 2)
     graphics::text(seqs, cumulativeSig, labels = cumulativeSig, cex = 1, pos = 3)
     # If cutBootstrap is provided and is numeric, draw a vertical red line at that threshold.
-    if(!isFALSE(cutBootstrap) & !isTRUE(cutBootstrap) & is.numeric(as.numeric(cutBootstrap))){
+    if(!isFALSE(cutBootstrap) & is.numeric(as.numeric(cutBootstrap))){
       graphics::abline(v = cutBootstrap, col = "red")
     }
     grDevices::dev.off()

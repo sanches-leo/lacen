@@ -455,8 +455,8 @@ summarizeAndEnrichModules.lacen <- function(lacenObject,
           module_trait_pval <- WGCNA::corPvalueStudent(module_trait_cor, nrow(datExpr))
 
           # Extract correlation and p-value for the second trait
-          correlation_value <- module_trait_cor[[2]]
-          p_value <- module_trait_pval[[2]]
+          correlation_value <- module_trait_cor["ME1", 1]
+          p_value <- module_trait_pval["ME1", 1]
 
           # Format the plot title
           plot_title <- paste0(
@@ -502,8 +502,8 @@ summarizeAndEnrichModules.lacen <- function(lacenObject,
             module_trait_cor <- WGCNA::cor(ordered_eigengenes, traits, use = "p")
             module_trait_pval <- WGCNA::corPvalueStudent(module_trait_cor, nrow(datExpr))
 
-            correlation_value <- module_trait_cor[[2]]
-            p_value <- module_trait_pval[[2]]
+            correlation_value <- module_trait_cor["ME1", 1]
+            p_value <- module_trait_pval["ME1", 1]
 
             plot_title <- paste0(
               "Module ", module_name,

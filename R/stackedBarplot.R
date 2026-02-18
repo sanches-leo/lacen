@@ -59,10 +59,10 @@ stackedBarplot.lacen <- function(lacenObject,
       ordered_MEs <- WGCNA::orderMEs(module_eigengenes)
       module_trait_cor <- WGCNA::cor(ordered_MEs, traits, use = "p")
       module_trait_pval <- WGCNA::corPvalueStudent(module_trait_cor, nrow(expr_selected))
-      correlation <- module_trait_cor[[2]]
+      correlation <- module_trait_cor["ME1", 1]
 
       # Assign correlation to zero if p-value is not significant
-      if (module_trait_pval[2, ] > 0.05) {
+      if (module_trait_pval["ME1", 1] > 0.05) {
         correlation <- 0
       }
 
